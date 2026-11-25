@@ -34,3 +34,9 @@ Method: automated Playwright sweep at 320, 414, 768, 1280 and 1920 px (horizonta
 - Removed every generic-AI visual signal: neon glow, gradient text, glassmorphism, cyber dark theme, identical rounded cards.
 - New concept: a precision lab instrument (Teenage Engineering hardware meets the 1975 NASA graphics manual). Warm grey body, black type, one signal orange; Archivo Expanded for display, IBM Plex Mono for readouts; a manual-style left gutter, hairline rules, crop marks, a black instrument screen with segmented meters.
 - The 1-2-3 flow, tabs and all features are unchanged. Re-tested: 0 overflow and 0 console errors at 5 widths; all 24 end-to-end checks pass.
+
+## Round 4 (user chose "Bold & fun", like Duolingo / The Pudding)
+- Chunky rounded type (Fredoka + Rubik), cream paper, five bright sticker colours with fixed jobs, thick outlines with hard offset shadows, push-down 3D buttons.
+- Original mascot "Lens" (a magnifying glass) reacts to verdicts and game answers.
+- Duolingo-style game feedback ("Nice!" / "Oops!" + Continue) and a chunky progress bar.
+- Same flow and features. Re-tested: 0 overflow, 0 undersized targets and 0 console errors at 5 widths; 24/24 end-to-end checks pass.
