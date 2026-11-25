@@ -29,3 +29,8 @@ Method: automated Playwright sweep at 320, 414, 768, 1280 and 1920 px (horizonta
 - Plain language throughout ("Exaggeration 2.88×" instead of a bare lie factor). The number editor is folded away and opens automatically only when ChartTruth needs you.
 - Futuristic dark visual: glowing glass panels, HUD-framed comparison viewer, scan animation while the AI reads. Reduced motion is respected.
 - Re-tested: 0 overflow and 0 console errors at 5 widths; every interaction passes end to end.
+
+## Round 3 (feedback: "looks like Claude made it")
+- Removed every generic-AI visual signal: neon glow, gradient text, glassmorphism, cyber dark theme, identical rounded cards.
+- New concept: a precision lab instrument (Teenage Engineering hardware meets the 1975 NASA graphics manual). Warm grey body, black type, one signal orange; Archivo Expanded for display, IBM Plex Mono for readouts; a manual-style left gutter, hairline rules, crop marks, a black instrument screen with segmented meters.
+- The 1-2-3 flow, tabs and all features are unchanged. Re-tested: 0 overflow and 0 console errors at 5 widths; all 27 end-to-end checks pass.

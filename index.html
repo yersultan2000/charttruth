@@ -1,328 +1,330 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#05070F">
+<meta name="theme-color" content="#E7E7E3">
 <title>ChartTruth — is this chart lying?</title>
-<meta name="description" content="Upload a chart. ChartTruth shows what's misleading, by how much, and draws the honest version.">
+<meta name="description" content="Give ChartTruth a chart. It finds the trick, measures the distortion, and draws the honest version.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=JetBrains+Mono:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Unbounded:wght@500;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Caveat:wght@600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* VOICE: a friendly mission-control instrument. Plain words, one step at a time.
-   IDEA: a scanner for charts. You feed it a chart, it scans, then shows the truth through a lens.
-   PICTURE: the correction viewer framed as a HUD, published chart on the left, the honest redraw glowing on the right.
-   COLOUR/TYPE: deep space #05070F, cyan #22D3EE and violet #A78BFA light; verdict neon red/amber/green. Unbounded display, Space Grotesk text, JetBrains Mono for HUD labels.
-   LAYOUT: three tabs (Check, Play, Learn). Check is a numbered 1-2-3 flow: pick, result, share. Advanced controls are folded away. */
-:root{color-scheme:dark;
---bg:#05070F;--bg2:#0A0F1F;--panel:rgba(16,24,48,.62);--panel2:rgba(22,32,64,.7);--line:rgba(130,160,255,.16);--line2:rgba(130,160,255,.3);
---ink:#EEF3FF;--ink2:#B4C0E0;--muted:#7D8AB0;
---cyan:#22D3EE;--blue:#3B82F6;--violet:#A78BFA;--pink:#F472B6;
---bad:#FF4D6D;--bad-bg:rgba(255,77,109,.12);--warn:#FFB020;--warn-bg:rgba(255,176,32,.12);--ok:#2EE6A6;--ok-bg:rgba(46,230,166,.12);
---d:"Unbounded","Space Grotesk",system-ui,sans-serif;--f:"Space Grotesk",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
---r:14px;--glow:0 0 0 1px rgba(34,211,238,.35),0 0 24px rgba(34,211,238,.25)}
+/* Concept: ChartTruth as a precision lab instrument. Teenage Engineering hardware meets the 1975 NASA graphics manual.
+   Warm light-grey body, black type, a single signal orange. Expanded grotesk for display, mono for every readout.
+   Hairline rules and crop marks instead of cards; one black "screen" per view is the focal point. Grid: 12 columns, 8px baseline. */
+:root{
+--body:#E7E7E3;--paper:#F4F4F1;--white:#FBFBF9;--ink:#111110;--ink2:#3A3A37;--mid:#6B6B66;--rule:#BDBDB6;--hair:#D6D6D0;
+--sig:#FF4F00;--bad:#D8361A;--warn:#A86F00;--ok:#1F7A45;
+--disp:"Archivo","Helvetica Neue",Arial,sans-serif;--f:"Archivo","Helvetica Neue",Arial,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
 *{box-sizing:border-box;min-width:0}
-html{scroll-behavior:smooth;scroll-padding-top:84px;overflow-x:clip}
-body{margin:0;color:var(--ink);font:16.5px/1.6 var(--f);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;overflow-x:clip;
- background:radial-gradient(1100px 600px at 8% -10%,rgba(167,139,250,.22),transparent 60%),radial-gradient(900px 600px at 100% 10%,rgba(34,211,238,.16),transparent 60%),radial-gradient(800px 500px at 50% 110%,rgba(59,130,246,.14),transparent 60%),var(--bg);background-attachment:fixed}
-body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(130,160,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(130,160,255,.05) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(circle at 50% 30%,#000 30%,transparent 80%)}
+html{scroll-behavior:smooth;scroll-padding-top:80px;overflow-x:clip}
+body{margin:0;background:var(--body);color:var(--ink);font:16px/1.55 var(--f);font-stretch:100%;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;overflow-x:clip}
 button,input,select,textarea{font:inherit;color:inherit}
-a{color:var(--cyan)}
-:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;border-radius:8px}
+a{color:var(--ink);text-underline-offset:3px}
+:focus-visible{outline:2px solid var(--sig);outline-offset:2px}
 [hidden]{display:none!important}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.wrap{max-width:1240px;margin:0 auto;padding:0 max(4vw,16px);position:relative;z-index:1}
 h1,h2,h3,h4,p{margin:0}
-h1,h2{font-family:var(--d);letter-spacing:-.02em;text-wrap:balance}
-.hud{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--cyan)}
+.wrap{max-width:1280px;margin:0 auto;padding:0 max(3.5vw,16px)}
+.lab{font:500 12px/1.3 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mid)}
+.disp{font-family:var(--disp);font-stretch:125%;font-weight:800;letter-spacing:-.025em}
 
 /* top bar */
-.top{position:sticky;top:0;z-index:40;background:rgba(5,7,15,.72);backdrop-filter:blur(16px) saturate(1.4);border-bottom:1px solid var(--line)}
-.top .wrap{display:flex;align-items:center;gap:16px;min-height:68px}
-.logo{display:flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font:700 19px var(--d);letter-spacing:-.02em}
-.logo svg{filter:drop-shadow(0 0 8px rgba(34,211,238,.6))}
-.tabs{display:flex;gap:4px;margin-left:auto;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:4px}
-.tabs button{border:0;background:none;border-radius:10px;padding:9px 16px;font-weight:600;font-size:15px;color:var(--ink2);cursor:pointer;min-height:40px;white-space:nowrap}
-.tabs button:hover{color:var(--ink)}
-.tabs button[aria-selected=true]{color:#05070F;background:linear-gradient(135deg,var(--cyan),#7DD3FC);box-shadow:0 0 18px rgba(34,211,238,.45)}
-.iconbtn{width:42px;height:42px;flex:none;display:grid;place-items:center;border-radius:12px;border:1px solid var(--line2);background:rgba(255,255,255,.03);color:var(--ink);cursor:pointer;font-weight:800;font-size:17px}
-.iconbtn:hover{border-color:var(--cyan);box-shadow:var(--glow)}
+.top{position:sticky;top:0;z-index:40;background:var(--body);border-bottom:1px solid var(--ink)}
+.top .wrap{display:flex;align-items:stretch;gap:24px;min-height:60px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font:800 18px var(--disp);font-stretch:125%;letter-spacing:-.02em}
+.logo small{font:500 12px var(--mono);color:var(--mid);letter-spacing:.04em;margin-left:2px}
+.tabs{display:flex;margin-left:auto}
+.tabs button{border:0;border-left:1px solid var(--hair);background:none;padding:0 20px;font-weight:600;font-size:15px;color:var(--ink2);cursor:pointer;min-height:60px;position:relative;white-space:nowrap}
+.tabs button:last-child{border-right:1px solid var(--hair)}
+.tabs button:hover{background:var(--paper)}
+.tabs button[aria-selected=true]{color:var(--ink);background:var(--paper)}
+.tabs button[aria-selected=true]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;background:var(--sig)}
+.qbtn{align-self:center;width:40px;height:40px;flex:none;border:1px solid var(--ink);background:none;font:600 16px var(--mono);cursor:pointer}
+.qbtn:hover{background:var(--ink);color:var(--white)}
 
 /* buttons */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:48px;padding:0 22px;border-radius:12px;border:0;font-weight:700;font-size:16px;cursor:pointer;text-decoration:none;white-space:nowrap;color:#05070F;background:linear-gradient(135deg,var(--cyan),#60A5FA);box-shadow:0 0 0 1px rgba(255,255,255,.15) inset,0 8px 28px rgba(34,211,238,.35);transition:transform .15s,box-shadow .2s}
-.btn:hover{transform:translateY(-1px);box-shadow:0 0 0 1px rgba(255,255,255,.25) inset,0 10px 36px rgba(34,211,238,.5)}
-.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
-.btn.alt{background:rgba(255,255,255,.05);color:var(--ink);box-shadow:0 0 0 1px var(--line2) inset}
-.btn.alt:hover{box-shadow:0 0 0 1px var(--cyan) inset,0 0 20px rgba(34,211,238,.2)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 22px;border:1px solid var(--ink);background:var(--ink);color:var(--white);font-weight:600;font-size:15.5px;cursor:pointer;text-decoration:none;white-space:nowrap;border-radius:2px;transition:background .15s,color .15s}
+.btn:hover{background:#2a2a28}
+.btn:disabled{background:transparent;color:var(--mid);border-color:var(--rule);cursor:not-allowed}
+.btn.alt{background:transparent;color:var(--ink)}
+.btn.alt:hover{background:var(--ink);color:var(--white)}
 .btn.sm{min-height:40px;padding:0 15px;font-size:14.5px}
-.linkbtn{border:0;background:none;color:var(--cyan);font-weight:600;font-size:14.5px;cursor:pointer;padding:8px 2px;min-height:36px}
-.linkbtn:hover{text-decoration:underline}
+.btn .k{font:500 12px var(--mono);opacity:.6}
+.linkbtn{border:0;background:none;padding:8px 0;min-height:36px;font:600 14px var(--f);color:var(--ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.linkbtn:hover{color:var(--sig)}
 
-/* panels */
-.panel{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:20px;backdrop-filter:blur(14px);padding:clamp(18px,2.4vw,28px)}
-.panel.glow::before{content:"";position:absolute;inset:-1px;border-radius:21px;padding:1px;background:linear-gradient(135deg,rgba(34,211,238,.7),rgba(167,139,250,.5) 40%,transparent 70%,rgba(34,211,238,.4));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
-main{padding:28px 0 80px}
-.tab{display:none}.tab.on{display:block;animation:fade .35s ease}
-@keyframes fade{from{opacity:0;transform:translateY(6px)}}
+main{padding:0 0 80px}
+.tab{display:none}.tab.on{display:block}
 
-/* intro + stepper */
-.intro{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:32px;align-items:end;margin:18px 0 26px}
-.intro h1{font-size:clamp(32px,4.6vw,62px);line-height:1.02;font-weight:800;background:linear-gradient(120deg,#fff 30%,#A5F3FC 60%,#C4B5FD);-webkit-background-clip:text;background-clip:text;color:transparent}
-.intro p{font-size:18px;color:var(--ink2);margin-top:14px;max-width:34em}
-.stepper{list-style:none;margin:0;padding:0;display:grid;gap:10px}
-.stepper li{display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:center;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.02);cursor:pointer}
-.stepper li b{display:block;font-size:15.5px}
-.stepper li span{font-size:14px;color:var(--muted)}
-.stepper .n{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font:800 17px var(--d);border:1px solid var(--line2);color:var(--ink2)}
-.stepper li.now{border-color:rgba(34,211,238,.5);background:rgba(34,211,238,.07)}
-.stepper li.now .n span{color:#05070F}.stepper li.now .n{background:var(--cyan);color:#05070F;border-color:var(--cyan);box-shadow:0 0 18px rgba(34,211,238,.6)}
-.stepper li.done .n{background:rgba(46,230,166,.15);color:var(--ok);border-color:rgba(46,230,166,.5)}
-.stepper li.done .n::after{content:"✓"}.stepper li.done .n span{display:none}
+/* manual layout: left gutter label + content */
+.sec{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,10fr);gap:24px;padding:40px 0;border-bottom:1px solid var(--ink)}
+.gut{position:relative}
+.gut .no{font:500 13px var(--mono);color:var(--mid)}
+.gut h2{font:800 22px/1.1 var(--disp);font-stretch:125%;letter-spacing:-.02em;margin-top:6px}
+.gut p{font-size:14px;color:var(--mid);margin-top:8px;max-width:16em}
+.sec.now .gut .no{color:var(--sig)}
 
-.step{margin-top:26px}
-.shead{display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}
-.shead .n{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font:800 16px var(--d);background:var(--cyan);color:#05070F;box-shadow:0 0 16px rgba(34,211,238,.5)}
-.shead h2{font-size:clamp(20px,2vw,26px);font-weight:700}
-.shead p{color:var(--muted);font-size:15px;flex-basis:100%;margin-left:52px;margin-top:-8px}
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:24px;padding:56px 0 40px;border-bottom:1px solid var(--ink)}
+.hero h1{font:800 clamp(40px,5.6vw,76px)/.95 var(--disp);font-stretch:125%;letter-spacing:-.035em;margin-top:14px}
+.hero h1 span{color:var(--sig)}
+.hero .sub{font-size:19px;line-height:1.5;color:var(--ink2);margin-top:20px;max-width:30em}
+.steps{list-style:none;margin:0;padding:0;align-self:end;border-top:1px solid var(--ink)}
+.steps li{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--hair);cursor:pointer}
+.steps li:hover b{text-decoration:underline}
+.steps .n{font:500 13px var(--mono);color:var(--mid)}
+.steps b{font-weight:700;font-size:16.5px}
+.steps span.d{display:block;font-size:14px;color:var(--mid)}
+.steps .st{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mid)}
+.steps li.done .st{color:var(--ok)}.steps li.done .st::before{content:"Done"}
+.steps li.now .n,.steps li.now .st{color:var(--sig)}.steps li.now .st::before{content:"You are here"}
+.steps li:not(.done):not(.now) .st::before{content:"Next"}
 
 /* step 1 */
-.pick{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:18px}
-.drop{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;min-height:260px;border-radius:20px;cursor:pointer;padding:24px;background:rgba(34,211,238,.04);border:1.5px dashed rgba(34,211,238,.5);transition:background .2s,border-color .2s}
-.drop:hover,.drop.over{background:rgba(34,211,238,.1);border-color:var(--cyan);box-shadow:var(--glow)}
-.drop .big{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(135deg,var(--cyan),var(--violet));color:#05070F;font-size:30px;font-weight:800;box-shadow:0 0 30px rgba(34,211,238,.5)}
-.drop b{font-size:20px;font-family:var(--d);font-weight:700}
-.drop span{color:var(--ink2);font-size:15px}
-.drop kbd,.keys kbd{font:600 12.5px var(--mono);border:1px solid var(--line2);border-radius:6px;padding:2px 7px;background:rgba(255,255,255,.05);color:var(--ink)}
-.exhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
-.exgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.ex{display:flex;flex-direction:column;gap:7px;text-align:left;padding:8px 8px 10px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.025);cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s}
-.ex:hover{border-color:var(--line2);transform:translateY(-2px)}
-.ex[aria-pressed=true]{border-color:var(--cyan);box-shadow:var(--glow)}
-.ex .th{aspect-ratio:16/10;border-radius:9px;overflow:hidden;background:#F6F5F0}
+.pick{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,6fr);gap:24px}
+.drop{display:flex;flex-direction:column;justify-content:space-between;min-height:290px;padding:22px;border:1px dashed var(--ink);background:var(--paper);cursor:pointer;text-align:left;transition:background .15s}
+.drop:hover,.drop.over{background:var(--white)}
+.drop .plus{font:300 56px/1 var(--mono);color:var(--ink)}
+.drop b{display:block;font:800 26px/1.05 var(--disp);font-stretch:125%;letter-spacing:-.02em;margin-top:auto}
+.drop span{display:block;color:var(--ink2);font-size:15px;margin-top:10px}
+.drop kbd,.keys kbd,.hint kbd{font:500 12.5px var(--mono);border:1px solid var(--rule);border-bottom-width:2px;padding:1px 6px;background:var(--white);border-radius:2px}
+.exhead{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:10px;border-bottom:1px solid var(--hair);margin-bottom:12px}
+.exhead b{font-weight:700}
+.exgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.ex{position:relative;display:flex;flex-direction:column;gap:8px;padding:0;border:0;background:none;text-align:left;cursor:pointer}
+.ex .th{aspect-ratio:16/10;background:#F6F5F0;border:1px solid var(--hair);overflow:hidden}
 .ex .th svg{display:block;width:100%;height:100%}
-.ex b{font-size:14px;font-weight:600;line-height:1.25;display:flex;align-items:center;gap:7px}
-.ex i{width:8px;height:8px;border-radius:50%;flex:none;box-shadow:0 0 8px currentColor}
+.ex:hover .th{border-color:var(--ink)}
+.ex[aria-pressed=true] .th{outline:2px solid var(--ink);outline-offset:2px}
+.ex[aria-pressed=true]::before{content:"";position:absolute;top:-4px;right:-4px;width:10px;height:10px;background:var(--sig);z-index:1}
+.ex b{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px;line-height:1.25}
+.ex i{width:7px;height:7px;flex:none}
 
-/* read panel (after upload) */
-.read{display:grid;grid-template-columns:200px minmax(0,1fr);gap:20px;margin-top:18px;align-items:start}
-.prev{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--line2);background:#fff;aspect-ratio:4/3}
+.read{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,7fr);gap:24px;margin-top:28px;padding-top:24px;border-top:1px solid var(--hair)}
+.prev{position:relative;background:var(--white);border:1px solid var(--hair);aspect-ratio:4/3}
 .prev img{width:100%;height:100%;object-fit:contain;display:block}
-.scan{position:absolute;inset:0;pointer-events:none;display:none}
-.scan.on{display:block;background:linear-gradient(180deg,transparent 0,rgba(34,211,238,.0) 40%,rgba(34,211,238,.55) 50%,rgba(34,211,238,0) 60%,transparent);background-size:100% 220%;animation:scan 1.4s linear infinite}
-@keyframes scan{from{background-position:0 120%}to{background-position:0 -120%}}
-.read h3{font-size:19px;font-weight:700;margin-bottom:4px}
-.choices{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
-.choice{border:1px solid var(--line);border-radius:16px;padding:16px;background:rgba(255,255,255,.025)}
-.choice h4{font-size:16px;margin-bottom:4px}
-.choice p{font-size:14.5px;color:var(--ink2);margin-bottom:12px}
-.seg{display:inline-flex;gap:3px;padding:3px;border-radius:11px;background:rgba(255,255,255,.04);border:1px solid var(--line);flex-wrap:wrap;margin-bottom:10px}
-.seg button{border:0;background:none;border-radius:8px;padding:7px 12px;font-weight:600;font-size:14px;color:var(--ink2);cursor:pointer;min-height:36px}
-.seg button[aria-pressed=true]{background:rgba(34,211,238,.16);color:var(--cyan);box-shadow:0 0 0 1px rgba(34,211,238,.4) inset}
-.in{width:100%;min-height:46px;border-radius:11px;border:1px solid var(--line2);background:rgba(5,7,15,.6);padding:0 13px;font-size:16px;color:var(--ink)}
-.in:focus{border-color:var(--cyan);outline:none;box-shadow:var(--glow)}
-.field{display:grid;gap:5px;margin-bottom:10px;font-size:13.5px;font-weight:600;color:var(--ink2)}
-.small{font-size:13.5px;color:var(--muted)}
-details.more summary{cursor:pointer;color:var(--ink2);font-size:14px;min-height:36px;display:flex;align-items:center;list-style:none}
-details.more summary::before{content:"▸";margin-right:8px;color:var(--cyan)}details.more[open] summary::before{content:"▾"}
-.status{display:flex;align-items:center;gap:10px;min-height:26px;margin-top:12px;font-size:15px;color:var(--ink2)}
+.scan{position:absolute;left:0;right:0;height:2px;background:var(--sig);top:0;display:none}
+.scan.on{display:block;animation:scan 1.6s ease-in-out infinite alternate}
+@keyframes scan{to{top:calc(100% - 2px)}}
+.read h3{font:800 20px var(--disp);font-stretch:125%;letter-spacing:-.02em}
+.read>div>p{color:var(--mid);font-size:15px;margin-top:6px}
+.choices{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);margin-top:16px;border:1px solid var(--ink)}
+.choice{padding:18px}
+.choice+.choice{border-left:1px solid var(--ink);background:var(--paper)}
+.choice h4{font-size:17px;font-weight:700}
+.choice>p{font-size:14.5px;color:var(--ink2);margin:4px 0 14px}
+.seg{display:flex;border:1px solid var(--ink);margin-bottom:12px;flex-wrap:wrap}
+.seg button{flex:1;border:0;background:none;padding:9px 10px;font-weight:600;font-size:14px;cursor:pointer;min-height:40px}
+.seg button+button{border-left:1px solid var(--ink)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--white)}
+.field{display:grid;gap:5px;margin-bottom:10px;font:500 12px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--mid)}
+.in,.fields input,.fields select,td input{width:100%;min-height:44px;border:1px solid var(--rule);border-radius:0;background:var(--white);padding:0 11px;font:400 16px var(--f);color:var(--ink);text-transform:none;letter-spacing:0}
+.in:focus,.fields input:focus,.fields select:focus,td input:focus{outline:2px solid var(--sig);outline-offset:-1px;border-color:var(--ink)}
+details.more summary{cursor:pointer;font-size:14px;color:var(--ink2);min-height:36px;display:flex;align-items:center;gap:8px;list-style:none}
+details.more summary::before{content:"+";font:500 15px var(--mono)}details.more[open] summary::before{content:"−"}
+.hint{font-size:13.5px;color:var(--mid)}
+.status{display:flex;align-items:center;gap:10px;min-height:28px;margin-top:12px;font-size:15px;color:var(--ink2)}
 .status.err{color:var(--bad)}.status.ok{color:var(--ok)}
-.spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(34,211,238,.25);border-top-color:var(--cyan);animation:sp .8s linear infinite}
+.spin{width:14px;height:14px;border:2px solid var(--rule);border-top-color:var(--sig);border-radius:50%;animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 
 /* step 2 */
-.result{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(20px,3vw,40px);align-items:start}
-.verdict{border-radius:18px;padding:20px;border:1px solid}
-.v-misleading{border-color:rgba(255,77,109,.5);background:linear-gradient(160deg,rgba(255,77,109,.16),rgba(255,77,109,.03))}
-.v-context{border-color:rgba(255,176,32,.5);background:linear-gradient(160deg,rgba(255,176,32,.14),rgba(255,176,32,.03))}
-.v-honest{border-color:rgba(46,230,166,.5);background:linear-gradient(160deg,rgba(46,230,166,.14),rgba(46,230,166,.03))}
-.v-unverifiable{border-color:var(--line2);background:rgba(255,255,255,.03)}
-.vlabel{display:inline-flex;align-items:center;gap:9px;font:800 13px var(--mono);letter-spacing:.14em;text-transform:uppercase}
-.vlabel i{width:10px;height:10px;border-radius:50%;background:currentColor;box-shadow:0 0 12px currentColor}
-.c-misleading{color:var(--bad)}.c-context{color:var(--warn)}.c-honest{color:var(--ok)}.c-unverifiable{color:var(--muted)}
-.vtitle{font:700 clamp(22px,2.3vw,30px)/1.15 var(--d);letter-spacing:-.02em;margin-top:12px}
+.result{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,6fr);gap:28px;align-items:start}
+.screen{background:#141413;color:#EDEDE8;padding:18px 20px 20px;border-radius:3px;box-shadow:inset 0 0 0 1px #000,inset 0 2px 0 rgba(255,255,255,.04)}
+.srow{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.vlabel{display:inline-flex;align-items:center;gap:8px;font:600 12.5px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.vlabel i{width:8px;height:8px;background:currentColor}
+.sunit{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#9C9C95}
+.c-misleading{color:#FF6A45}.c-context{color:#FFC14D}.c-honest{color:#59D98E}.c-unverifiable{color:#9C9C95}
+.lab .c-misleading,.lab.c-misleading{color:var(--bad)}
+.readout{font:500 clamp(64px,7vw,96px)/1 var(--mono);letter-spacing:-.04em;margin-top:14px;color:var(--sig)}
+.s-honest .readout{color:#59D98E}.s-context .readout{color:#FFC14D}.s-unverifiable .readout{color:#9C9C95}
+.ssub{font-size:14px;color:#B9B9B2;margin-top:8px;max-width:30em}
+.meter{display:grid;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid #2C2C2A}
+.meter div{display:grid;grid-template-columns:56px 1fr 60px;gap:12px;align-items:center;font:500 12.5px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:#9C9C95}
+.meter b{color:#EDEDE8;text-align:right;font-weight:500}
+.seg2{display:block;height:12px;width:var(--w);background:repeating-linear-gradient(90deg,currentColor 0 7px,transparent 7px 10px);transition:width .45s ease}
+.seg2.bad{color:#FF6A45}.seg2.ok{color:#59D98E}
+.vtitle{font:800 clamp(22px,2.2vw,28px)/1.12 var(--disp);font-stretch:112%;letter-spacing:-.02em;margin-top:20px}
 .vlead{color:var(--ink2);margin-top:10px;font-size:16px}
-.metric{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 16px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
-.metric .num{flex:none;font:800 clamp(48px,5vw,68px)/.9 var(--d);letter-spacing:-.04em;text-shadow:0 0 30px currentColor}
-.metric>div:last-child{flex:1 1 200px}.metric b{display:block;font-size:15px}.metric span{font-size:14px;color:var(--ink2)}
-.bars{display:grid;gap:8px;margin-top:14px;font-size:14px}
-.bars div{display:grid;grid-template-columns:82px 1fr 62px;gap:10px;align-items:center}
-.bars i{display:block;height:10px;border-radius:99px;transition:width .5s ease}
-.bars span:last-child{text-align:right;font-family:var(--mono);font-weight:600}
+.why{margin-top:24px;border-top:1px solid var(--ink)}
+.why h3{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mid);padding:12px 0 2px}
+ol.find{list-style:none;margin:0;padding:0;counter-reset:f}
+ol.find>li{counter-increment:f;display:grid;grid-template-columns:36px 1fr;gap:10px;padding:14px 0;border-bottom:1px solid var(--hair)}
+ol.find>li::before{content:counter(f,decimal-leading-zero);font:600 13px var(--mono);color:var(--bad);padding-top:2px}
+ol.find>li.context::before{color:var(--warn)}ol.find>li.ok::before{content:"OK";color:var(--ok)}ol.find>li.unv::before{content:"—";color:var(--mid)}
+.ftag{display:block;font-weight:700;font-size:15.5px}
+details.math summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;min-height:34px;font:500 13px var(--mono);color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+details.math summary::before{content:"Show the math"}details.math[open] summary::before{content:"Hide the math"}
+.calc{background:var(--white);border:1px solid var(--hair);border-left:3px solid var(--sig);padding:10px 12px;font:12.5px/1.75 var(--mono);overflow-x:auto;white-space:pre;color:var(--ink)}
 
-.viewer{position:relative;padding:14px}
-.viewer::before,.viewer::after{content:"";position:absolute;width:26px;height:26px;border:2px solid var(--cyan);pointer-events:none;filter:drop-shadow(0 0 6px rgba(34,211,238,.7))}
-.viewer::before{top:0;left:0;border-right:0;border-bottom:0;border-radius:10px 0 0 0}
-.viewer::after{bottom:0;right:0;border-left:0;border-top:0;border-radius:0 0 10px 0}
+.viewer{position:relative;padding:18px}
+.viewer i.cm{position:absolute;width:14px;height:14px;border-color:var(--ink);border-style:solid;border-width:0}
+.viewer i.tl{top:0;left:0;border-top-width:1px;border-left-width:1px}.viewer i.tr{top:0;right:0;border-top-width:1px;border-right-width:1px}
+.viewer i.bl{bottom:0;left:0;border-bottom-width:1px;border-left-width:1px}.viewer i.br{bottom:0;right:0;border-bottom-width:1px;border-right-width:1px}
 .vtop{display:flex;justify-content:space-between;margin-bottom:8px}
-.vtop span{font:600 12px var(--mono);letter-spacing:.12em;text-transform:uppercase}
-.vtop span:first-child{color:#FFB4C1}.vtop span:last-child{color:var(--cyan)}
-.wipe{position:relative;border-radius:12px;overflow:hidden;background:#0B1224;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:ew-resize;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.vtop span{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mid)}
+.vtop span b{color:var(--ink);font-weight:600}
+.wipe{position:relative;overflow:hidden;background:var(--white);border:1px solid var(--ink);touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:ew-resize}
 .wipe .under svg,.wipe .over svg{display:block;width:100%;height:auto}
 .wipe .over{position:absolute;inset:0;clip-path:inset(0 calc(100% - var(--x,50%)) 0 0);background:#F6F5F0}
 .wipe .over img{width:100%;height:100%;object-fit:contain}
 .handle{position:absolute;top:0;bottom:0;left:var(--x,50%);width:48px;margin-left:-24px;cursor:ew-resize;z-index:2}
-.handle::before{content:"";position:absolute;left:23px;top:0;bottom:0;width:2px;background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
-.handle span{position:absolute;top:50%;left:50%;width:48px;height:48px;border-radius:50%;transform:translate(-50%,-50%);display:grid;place-items:center;background:#05070F;border:2px solid var(--cyan);color:var(--cyan);font-weight:800;font-size:18px;box-shadow:0 0 22px rgba(34,211,238,.7)}
-.wipe .sweep{position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(34,211,238,.25),transparent);width:30%;transform:translateX(-120%)}
-.wipe .sweep.go{animation:sw 1.1s ease-out}
-@keyframes sw{to{transform:translateX(420%)}}
-.vbar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:14px;color:var(--muted)}
-.chk{display:inline-flex;gap:8px;align-items:center;font-size:14.5px;color:var(--ink2);cursor:pointer;min-height:34px}
-.chk input{width:18px;height:18px;accent-color:var(--cyan);margin:0}
+.handle::before{content:"";position:absolute;left:23px;top:0;bottom:0;width:2px;background:var(--ink)}
+.handle span{position:absolute;top:50%;left:50%;width:44px;height:44px;transform:translate(-50%,-50%);display:grid;place-items:center;background:var(--sig);color:var(--ink);font:600 16px var(--mono);border:2px solid var(--ink)}
+.sweep{display:none}
+.vbar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:14px;color:var(--mid)}
+.chk{display:inline-flex;gap:9px;align-items:center;font-size:15px;color:var(--ink2);cursor:pointer;min-height:36px}
+.chk input{width:18px;height:18px;accent-color:var(--ink);margin:0}
 
-.why{margin-top:22px}
-.why h3{font:700 18px var(--d);margin-bottom:6px}
-ol.find{list-style:none;margin:0;padding:0;counter-reset:f;display:grid;gap:10px}
-ol.find>li{counter-increment:f;display:grid;grid-template-columns:34px 1fr;gap:12px;padding:14px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
-ol.find>li::before{content:counter(f);width:28px;height:28px;border-radius:9px;display:grid;place-items:center;font:800 13px var(--d);color:#05070F;background:var(--bad);box-shadow:0 0 12px rgba(255,77,109,.6)}
-ol.find>li.context::before{background:var(--warn);box-shadow:0 0 12px rgba(255,176,32,.5)}
-ol.find>li.ok::before{content:"✓";background:var(--ok);box-shadow:0 0 12px rgba(46,230,166,.5)}
-ol.find>li.unv::before{content:"?";background:var(--muted)}
-.ftag{display:block;font-weight:700;font-size:15.5px;margin-bottom:2px}
-details.math summary{cursor:pointer;color:var(--cyan);font-weight:600;font-size:14px;list-style:none;display:inline-flex;min-height:34px;align-items:center}
-details.math summary::before{content:"Show the math"}details.math[open] summary::before{content:"Hide the math"}
-.calc{background:rgba(5,7,15,.7);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:12.5px/1.75 var(--mono);color:#A5F3FC;overflow-x:auto;white-space:pre}
-
-details.numbers{margin-top:22px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.02)}
-details.numbers>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:12px;padding:16px 18px;min-height:56px;font-weight:700}
-details.numbers>summary::after{content:"▾";margin-left:auto;color:var(--cyan);transition:transform .2s}
-details.numbers[open]>summary::after{transform:rotate(180deg)}
-details.numbers>summary small{font-weight:500;color:var(--muted)}
-.nbody{padding:0 18px 18px}
-.edtools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+details.numbers{margin-top:28px;border:1px solid var(--ink);background:var(--paper)}
+details.numbers>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:14px;padding:14px 18px;min-height:56px;font-weight:700;font-size:16px;flex-wrap:wrap}
+details.numbers>summary::after{content:"+";margin-left:auto;font:400 22px var(--mono)}
+details.numbers[open]>summary::after{content:"−"}
+details.numbers>summary small{font-weight:400;color:var(--mid);font-size:14px}
+.nbody{padding:4px 18px 18px;border-top:1px solid var(--hair)}
+.edtools{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
 .fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-.fields label{display:grid;gap:5px;font-size:13.5px;font-weight:600;color:var(--ink2)}
+.fields label{display:grid;gap:5px;font:500 12px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--mid)}
 .fields .w2{grid-column:span 2}.fields .w4{grid-column:1/-1}
-.fields input,.fields select,td input{width:100%;min-height:44px;border-radius:10px;border:1px solid var(--line2);background:rgba(5,7,15,.6);padding:0 11px;font-size:16px;color:var(--ink)}
-.fields select option{background:#0A0F1F}
-.fields input:focus,td input:focus,.fields select:focus{border-color:var(--cyan);outline:none;box-shadow:var(--glow)}
-input.invalid{border-color:var(--bad)!important;background:var(--bad-bg)!important}
-.cues{display:flex;flex-wrap:wrap;gap:4px 20px;margin:14px 0 6px}
-table{width:100%;border-collapse:collapse;margin-top:6px}
-th{text-align:left;font:600 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:8px 6px 8px 0;border-bottom:1px solid var(--line2)}
-td{padding:6px 6px 6px 0;border-bottom:1px solid var(--line);vertical-align:top}
+input.invalid{border-color:var(--bad)!important;background:#FBE9E5!important}
+.cues{display:flex;flex-wrap:wrap;gap:2px 22px;margin:14px 0 6px}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th{text-align:left;font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mid);padding:8px 8px 8px 0;border-bottom:1px solid var(--ink)}
+td{padding:6px 8px 6px 0;border-bottom:1px solid var(--hair);vertical-align:top}
 td.n input{text-align:right;font-family:var(--mono)}
-tr.dis td{background:var(--warn-bg)}
-.dnote{display:block;font-size:12.5px;color:var(--warn);font-weight:600;padding:4px 2px 0}
-.x{width:40px;height:40px;border:0;background:none;color:var(--muted);font-size:22px;cursor:pointer;border-radius:10px}
-.x:hover{background:var(--bad-bg);color:var(--bad)}
-.note{border-left:3px solid var(--warn);background:var(--warn-bg);padding:11px 14px;border-radius:0 10px 10px 0;font-size:14.5px;margin-bottom:12px}
-.note.good{border-color:var(--ok);background:var(--ok-bg)}
-pre{background:rgba(5,7,15,.8);border:1px solid var(--line);color:#C7D2FE;border-radius:12px;padding:14px;overflow:auto;font:12.5px/1.6 var(--mono);max-height:320px;margin:8px 0 0}
+tr.dis td{background:#F6EBD2}
+.dnote{display:block;font:500 12.5px var(--mono);color:var(--warn);padding:4px 2px 0}
+.x{width:40px;height:40px;border:0;background:none;font:400 20px var(--mono);color:var(--mid);cursor:pointer}
+.x:hover{color:var(--bad)}
+.note{border-left:3px solid var(--warn);background:#F6EBD2;padding:11px 14px;font-size:14.5px;margin-top:14px}
+.note.good{border-color:var(--ok);background:#E3F0E7}
+pre{background:var(--white);border:1px solid var(--hair);padding:14px;overflow:auto;font:12.5px/1.6 var(--mono);max-height:320px;margin:8px 0 0}
 
 /* step 3 */
-.share{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.sbox{border:1px solid var(--line);border-radius:16px;padding:14px 16px;background:rgba(255,255,255,.025)}
+.share{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--ink)}
+.sbox{padding:16px 20px 16px 0}
+.sbox+.sbox{padding-left:20px;border-left:1px solid var(--hair)}
 .sbox .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.sbox .row b{font:600 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-.sbox p{font-size:15px;margin-top:4px}
-.sactions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.sbox p{font-size:16px;margin-top:4px}
+.sactions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
 
 /* play */
-.game{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:clamp(20px,3vw,40px);align-items:start;margin-top:22px}
-.gchart{border-radius:16px;overflow:hidden;background:#F6F5F0;box-shadow:0 0 0 1px var(--line2),0 24px 60px rgba(0,0,0,.5)}
+.game{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:28px;align-items:start}
+.gchart{border:1px solid var(--ink);background:#F6F5F0}
 .gchart svg{display:block;width:100%;height:auto}
-.score{display:flex;align-items:baseline;gap:14px}
-.score b{font:800 52px/1 var(--d);color:var(--cyan);text-shadow:0 0 24px rgba(34,211,238,.6)}
-.score span{color:var(--muted)}
-.prog{display:flex;gap:5px;margin:14px 0 18px}
-.prog i{flex:1;height:6px;border-radius:99px;background:rgba(255,255,255,.08)}
-.prog i.hit{background:var(--ok);box-shadow:0 0 8px var(--ok)}.prog i.miss{background:var(--bad);box-shadow:0 0 8px var(--bad)}.prog i.now{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
-.opts{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
-.opt{min-height:56px;text-align:left;border:1px solid var(--line2);background:rgba(255,255,255,.03);border-radius:13px;padding:10px 14px;font-weight:600;font-size:15px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
-.opt kbd{font:600 12px var(--mono);color:var(--muted)}
-.opt:hover:not(:disabled){border-color:var(--cyan);box-shadow:var(--glow)}
+.scorebox{background:#141413;color:#EDEDE8;padding:14px 18px;display:flex;justify-content:space-between;align-items:flex-end;border-radius:3px}
+.scorebox b{font:500 56px/1 var(--mono);color:var(--sig);letter-spacing:-.04em}
+.scorebox span{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#9C9C95;text-align:right}
+.prog{display:flex;gap:3px;margin:12px 0 18px}
+.prog i{flex:1;height:8px;background:var(--hair)}
+.prog i.hit{background:var(--ok)}.prog i.miss{background:var(--bad)}.prog i.now{background:var(--ink)}
+.gq{font:800 20px var(--disp);font-stretch:112%;letter-spacing:-.02em}
+.opts{display:grid;grid-template-columns:1fr 1fr;margin-top:12px;border-top:1px solid var(--ink);border-left:1px solid var(--ink)}
+.opt{min-height:56px;text-align:left;border:0;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);background:var(--paper);padding:10px 14px;font-weight:600;font-size:15px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.opt kbd{font:500 12px var(--mono);color:var(--mid)}
+.opt:hover:not(:disabled){background:var(--white)}
 .opt:disabled{cursor:default}
-.opt.right{border-color:var(--ok);background:var(--ok-bg);color:var(--ok)}
-.opt.wrong{border-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
-.fb{margin-top:16px;padding:14px 16px;border-radius:14px;font-size:15.5px}
-.fb.good{background:var(--ok-bg);border:1px solid rgba(46,230,166,.4)}.fb.bad{background:var(--bad-bg);border:1px solid rgba(255,77,109,.4)}
-.fb b{display:block;font:700 17px var(--d);margin-bottom:4px}
+.opt.right{background:var(--ok);color:#fff}.opt.right kbd{color:#d8f0e0}
+.opt.wrong{background:var(--bad);color:#fff}.opt.wrong kbd{color:#ffe0d8}
+.fb{margin-top:16px;padding:14px 0;border-top:1px solid var(--ink);font-size:16px}
+.fb b{display:block;font:800 18px var(--disp);font-stretch:112%;margin-bottom:4px}
+.fb.good b{color:var(--ok)}.fb.bad b{color:var(--bad)}
 
 /* learn */
-.subnav{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 8px;position:sticky;top:78px;z-index:5;padding:8px;border-radius:16px;background:rgba(5,7,15,.82);backdrop-filter:blur(12px);border:1px solid var(--line);width:max-content;max-width:100%}
-.subnav a{padding:8px 14px;border-radius:99px;border:1px solid var(--line2);color:var(--ink2);text-decoration:none;font-weight:600;font-size:14.5px;min-height:40px;display:inline-flex;align-items:center}
-.subnav a:hover{border-color:var(--cyan);color:var(--ink)}
-.lsec{padding-top:44px}
-.lsec>h2{font-size:clamp(24px,2.6vw,34px);font-weight:700}
-.lsec>p.lead{color:var(--ink2);margin-top:8px;max-width:44em}
-.tricks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:20px}
-.trick{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:18px;background:var(--panel);border:1px solid var(--line);transition:border-color .2s,box-shadow .2s}
-.trick:hover{border-color:rgba(34,211,238,.5);box-shadow:var(--glow)}
-.trick .tth{border-radius:10px;overflow:hidden;background:#F6F5F0;aspect-ratio:16/9}
+.subnav{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--ink);position:sticky;top:61px;z-index:5;background:var(--body)}
+.subnav a{padding:0 16px;min-height:46px;display:inline-flex;align-items:center;text-decoration:none;font-weight:600;font-size:14.5px;color:var(--ink2);border-right:1px solid var(--hair)}
+.subnav a:first-child{padding-left:0}
+.subnav a:hover{color:var(--ink);text-decoration:underline}
+.tricks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 24px}
+.trick{display:grid;grid-template-columns:120px 1fr;gap:16px;padding:18px 0;border-top:1px solid var(--hair)}
+.trick .tth{aspect-ratio:16/11;background:#F6F5F0;border:1px solid var(--hair);overflow:hidden}
 .trick .tth svg{display:block;width:100%;height:100%}
-.trick h3{font:700 17px var(--d)}
-.trick p{font-size:15px;color:var(--ink2)}
-.trick code{font:12.5px var(--mono);color:#A5F3FC}
-.labgrid{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,8fr);gap:20px;margin-top:20px;align-items:start}
+.trick h3{font-size:17px;font-weight:700}
+.trick p{font-size:14.5px;color:var(--ink2);margin-top:3px}
+.trick code{display:block;font:12.5px var(--mono);color:var(--mid);margin-top:6px}
+.trick .linkbtn{margin-top:2px}
+.labgrid{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,8fr);gap:28px;align-items:start}
 .ctrl{display:grid;gap:14px}
 .range label{display:flex;justify-content:space-between;font-weight:700}
-.range output{font-family:var(--mono);color:var(--bad)}
-input[type=range]{width:100%;accent-color:var(--cyan);height:34px}
-.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.trio div{border:1px solid var(--line);border-radius:12px;padding:10px;background:rgba(255,255,255,.03)}
-.trio b{display:block;font:800 24px/1.1 var(--d)}
-.trio small{font-size:13px;color:var(--muted)}
-.lpair{display:grid;grid-template-columns:1fr 1fr;gap:14px;perspective:1100px}
-.lpair figure{margin:0}.lpair figcaption{font:600 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-.tilt{transition:transform .35s ease;border-radius:14px;overflow:hidden;background:#F6F5F0}
+.range output{font:500 15px var(--mono);color:var(--sig)}
+input[type=range]{width:100%;accent-color:var(--ink);height:34px}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:#141413;color:#EDEDE8;border-radius:3px}
+.trio div{padding:12px}
+.trio div+div{border-left:1px solid #2C2C2A}
+.trio b{display:block;font:500 26px/1.1 var(--mono);letter-spacing:-.03em}
+.trio small{font:500 12px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:#9C9C95}
+.lpair{display:grid;grid-template-columns:1fr 1fr;gap:16px;perspective:1100px}
+.lpair figure{margin:0}.lpair figcaption{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mid);margin-bottom:8px}
+.tilt{transition:transform .35s ease;background:#F6F5F0;border:1px solid var(--ink)}
 .tilt svg,.lhon svg{display:block;width:100%;height:auto}
-.lhon{border-radius:14px;overflow:hidden;border:1px solid var(--line2)}
-.pipe{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:20px;counter-reset:p;list-style:none;padding:0}
-.pipe li{counter-increment:p;padding:18px;border-radius:18px;background:var(--panel);border:1px solid var(--line)}
-.pipe li::before{content:counter(p);display:grid;place-items:center;width:40px;height:40px;border-radius:12px;font:800 16px var(--d);color:#05070F;background:var(--violet);box-shadow:0 0 16px rgba(167,139,250,.6);margin-bottom:12px}
-.pipe li.ai::before{background:var(--cyan);box-shadow:0 0 16px rgba(34,211,238,.6)}.pipe li.m::before{background:var(--ok);box-shadow:0 0 16px rgba(46,230,166,.6)}
-.pipe h3{font:700 16px var(--d)}.pipe p{font-size:14.5px;color:var(--ink2);margin-top:6px}
-.vs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
-.vs>div{padding:18px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.02)}
-.vs>div.us{border-color:rgba(34,211,238,.5);background:rgba(34,211,238,.06)}
-.vs h3{font:700 16px var(--d)}
+.lhon{border:1px solid var(--ink)}
+.pipe{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--ink)}
+.pipe li{padding:16px 18px 18px 0}
+.pipe li+li{padding-left:18px;border-left:1px solid var(--hair)}
+.pipe .k{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mid)}
+.pipe .k.ai{color:var(--sig)}
+.pipe h3{font:800 18px/1.15 var(--disp);font-stretch:112%;margin-top:8px}
+.pipe p{font-size:14.5px;color:var(--ink2);margin-top:6px}
+.vs{display:grid;grid-template-columns:1fr 1fr;margin-top:28px;border:1px solid var(--ink)}
+.vs>div{padding:18px}
+.vs>div+div{border-left:1px solid var(--ink);background:var(--white)}
+.vs h3{font-weight:700;font-size:17px}
 .vs ul{list-style:none;margin:10px 0 0;padding:0}
-.vs li{padding:7px 0 7px 26px;position:relative;color:var(--ink2);font-size:15px}
-.vs li::before{content:"✕";position:absolute;left:0;color:var(--bad)}.vs .us li::before{content:"✓";color:var(--ok)}
-.ebig{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:20px}
-.ebig div{padding:18px;border-radius:18px;background:var(--panel);border:1px solid var(--line)}
-.ebig b{display:block;font:800 clamp(38px,4vw,54px)/1 var(--d);color:var(--cyan);text-shadow:0 0 24px rgba(34,211,238,.5)}
-.ebig span{font-size:14.5px;color:var(--ink2)}
-.cov{display:grid;gap:8px;margin-top:18px}
-.cov div{display:grid;grid-template-columns:minmax(140px,1.2fr) 3fr 46px 78px;gap:12px;align-items:center;font-size:14.5px}
-.cov i{display:block;height:10px;border-radius:99px}
-.cov em{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;font-style:normal;text-align:center;padding:3px 6px;border-radius:99px}
-.cov .full{color:var(--ok);background:var(--ok-bg)}.cov .partial{color:var(--warn);background:var(--warn-bg)}.cov .none{color:var(--muted);background:rgba(255,255,255,.05)}
-.bench{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:20px;margin-top:20px}
-.mt td,.mt th{text-align:right}.mt td:first-child,.mt th:first-child{text-align:left}.mt td{font-family:var(--mono);font-size:14.5px;padding:10px 6px 10px 0}.mt td:first-child{font-family:var(--f);font-weight:600}
-.cms{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
-.cm{display:grid;grid-template-columns:auto 1fr 1fr;gap:4px;font-size:12.5px;margin-top:6px}
-.cm span{padding:6px;color:var(--muted);text-align:center;align-self:center}
-.cm b{padding:12px 4px;text-align:center;font:800 22px var(--d);border-radius:9px}
-.cm .g{background:var(--ok-bg);color:var(--ok)}.cm .r{background:var(--bad-bg);color:var(--bad)}
-textarea{width:100%;min-height:140px;border:1px solid var(--line2);border-radius:12px;padding:10px;font:12.5px/1.5 var(--mono);background:rgba(5,7,15,.7);color:var(--ink)}
-.std{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:20px}
-.std div{padding:16px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.02)}
-.std h3{font:700 15px var(--d)}.std p{font-size:14.5px;color:var(--ink2);margin-top:6px}
+.vs li{padding:8px 0 8px 26px;position:relative;border-top:1px solid var(--hair);font-size:15px}
+.vs li::before{content:"×";position:absolute;left:2px;font:500 15px var(--mono);color:var(--bad)}
+.vs div+div li::before{content:"✓";color:var(--ok)}
+.ebig{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--ink)}
+.ebig div{padding:16px 18px 18px 0}
+.ebig div+div{padding-left:18px;border-left:1px solid var(--hair)}
+.ebig b{display:block;font:500 clamp(44px,4.6vw,64px)/1 var(--mono);letter-spacing:-.04em}
+.ebig div:first-child b{color:var(--sig)}
+.ebig span{font-size:14.5px;color:var(--ink2);display:block;margin-top:6px}
+.cov{display:grid;gap:6px;margin-top:26px}
+.cov div{display:grid;grid-template-columns:minmax(150px,1.2fr) 3fr 44px 74px;gap:12px;align-items:center;font-size:14.5px}
+.cov i{display:block;height:10px}
+.cov em{font:500 12px var(--mono);letter-spacing:.05em;text-transform:uppercase;font-style:normal;text-align:right}
+.cov .full{color:var(--ok)}.cov .partial{color:var(--warn)}.cov .none{color:var(--mid)}
+.bench{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:28px;margin-top:32px}
+.mt th,.mt td{text-align:right}.mt th:first-child,.mt td:first-child{text-align:left}
+.mt td{font:500 14.5px var(--mono);padding:10px 8px 10px 0}.mt td:first-child{font:600 15px var(--f)}
+.cms{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+.cm{display:grid;grid-template-columns:auto 1fr 1fr;gap:2px;font-size:12.5px;margin-top:6px}
+.cm span{padding:6px;color:var(--mid);text-align:center;align-self:center;font-family:var(--mono)}
+.cm b{padding:12px 4px;text-align:center;font:500 22px var(--mono)}
+.cm .g{background:#E3F0E7;color:var(--ok)}.cm .r{background:#FBE9E5;color:var(--bad)}
+textarea{width:100%;min-height:140px;border:1px solid var(--rule);padding:10px;font:12.5px/1.5 var(--mono);background:var(--white)}
+.std{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0 24px}
+.std div{padding:14px 0;border-top:1px solid var(--hair)}
+.std h3{font-size:16px;font-weight:700}.std p{font-size:14.5px;color:var(--ink2);margin-top:4px}
+code{font:13px var(--mono)}
 
-footer{border-top:1px solid var(--line);padding:26px 0 34px;color:var(--muted);font-size:14px;position:relative;z-index:1}
-footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
-footer a{color:var(--ink2);display:inline-block;padding:10px 0}
+footer{padding:24px 0 36px}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--mid)}
+footer a{display:inline-block;padding:10px 0;color:var(--ink)}
 
 /* overlays */
-.toasts{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:90;display:grid;gap:8px;pointer-events:none;width:max-content;max-width:calc(100vw - 32px)}
-.toast{background:rgba(10,15,31,.95);border:1px solid rgba(34,211,238,.5);box-shadow:0 0 24px rgba(34,211,238,.25);color:var(--ink);padding:11px 18px;border-radius:12px;font-weight:600;font-size:14.5px;animation:fade .25s ease}
-dialog{border:1px solid var(--line2);border-radius:20px;padding:0;max-width:560px;width:calc(100% - 32px);background:#0A0F1F;color:var(--ink);box-shadow:0 30px 90px rgba(0,0,0,.6),var(--glow)}
-dialog::backdrop{background:rgba(2,4,10,.7);backdrop-filter:blur(4px)}
+.toasts{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:90;display:grid;gap:8px;pointer-events:none;width:max-content;max-width:calc(100vw - 32px)}
+.toast{background:var(--ink);color:var(--white);padding:11px 16px;font-size:14.5px;border-left:4px solid var(--sig);animation:tin .2s ease}
+@keyframes tin{from{opacity:0;transform:translateY(6px)}}
+dialog{border:1px solid var(--ink);border-radius:0;padding:0;max-width:560px;width:calc(100% - 32px);background:var(--body);color:var(--ink);box-shadow:10px 10px 0 var(--ink)}
+dialog::backdrop{background:rgba(17,17,16,.45)}
 .dlg{padding:24px}
-.dlg h3{font:700 20px var(--d);margin-bottom:12px}
-.dlg ol{margin:0 0 18px;padding-left:20px;color:var(--ink2)}.dlg li{margin:6px 0}
+.dlg h3{font:800 20px var(--disp);font-stretch:125%;letter-spacing:-.02em;margin-bottom:12px}
+.dlg ol{margin:0 0 20px;padding-left:20px;color:var(--ink2)}.dlg li{margin:6px 0}
 .keys{display:grid;grid-template-columns:auto 1fr;gap:9px 16px;font-size:15px;align-items:center}
-.dropall{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:rgba(5,7,15,.75);backdrop-filter:blur(6px)}
-.dropall div{padding:34px 44px;border-radius:24px;border:2px dashed var(--cyan);box-shadow:var(--glow);text-align:center;background:#0A0F1F}
-.dropall b{display:block;font:700 24px var(--d)}
+.dropall{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:rgba(231,231,227,.9)}
+.dropall div{padding:36px 48px;border:2px dashed var(--ink);background:var(--white);text-align:center}
+.dropall b{display:block;font:800 26px var(--disp);font-stretch:125%}
 
-@media(max-width:1000px){.intro,.pick,.result,.game,.labgrid,.bench{grid-template-columns:1fr}.tricks{grid-template-columns:1fr 1fr}.pipe,.std{grid-template-columns:1fr 1fr}.exgrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
-@media(max-width:680px){.top .wrap{flex-wrap:wrap;gap:10px;padding-top:10px;padding-bottom:10px}.tabs{order:3;width:100%;margin-left:0}.tabs button{flex:1;padding:9px 6px;font-size:14px}.helpwrap{margin-left:auto}
- .exgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.read{grid-template-columns:1fr}.prev{max-width:260px}.choices,.share,.opts,.vs,.cms,.tricks,.pipe,.std,.ebig,.lpair{grid-template-columns:1fr}
- .fields{grid-template-columns:1fr 1fr}.drop{min-height:190px}.shead p{margin-left:0}.cov div{grid-template-columns:1fr 2fr 40px}.cov em{display:none}.subnav{top:118px}html{scroll-padding-top:130px}}
+@media(max-width:1000px){.hero,.pick,.result,.game,.labgrid,.bench{grid-template-columns:1fr}.sec{grid-template-columns:1fr;gap:14px}.gut p{max-width:none}
+ .tricks{grid-template-columns:1fr 1fr}.pipe,.std{grid-template-columns:1fr 1fr}.pipe li:nth-child(3){padding-left:0;border-left:0}}
+@media(max-width:680px){.top .wrap{flex-wrap:wrap;gap:0}.logo{min-height:52px}.qbtn{margin-left:auto}.tabs{order:3;width:calc(100% + 2*max(3.5vw,16px));margin:0 calc(-1*max(3.5vw,16px));border-top:1px solid var(--hair)}.tabs button{flex:1;padding:0 6px;font-size:14px;min-height:48px}.tabs button:first-child{border-left:0}.tabs button:last-child{border-right:0}
+ .exgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.read{grid-template-columns:1fr}.choices{grid-template-columns:1fr}.choice+.choice{border-left:0;border-top:1px solid var(--ink)}
+ .share,.opts,.vs,.cms,.tricks,.pipe,.std,.ebig,.lpair{grid-template-columns:1fr}.sbox+.sbox,.pipe li+li,.ebig div+div{padding-left:0;border-left:0;border-top:1px solid var(--hair)}.vs>div+div{border-left:0;border-top:1px solid var(--ink)}
+ .fields{grid-template-columns:1fr 1fr}.drop{min-height:210px}.cov div{grid-template-columns:1fr 2fr 40px}.cov em{display:none}.subnav{top:101px}html{scroll-padding-top:150px}.hero{padding-top:36px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
@@ -330,156 +332,155 @@ dialog::backdrop{background:rgba(2,4,10,.7);backdrop-filter:blur(4px)}
 <header class="top">
   <div class="wrap">
     <a class="logo" href="#check" id="logoLink" aria-label="ChartTruth, check a chart">
-      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect x="3" y="17" width="6" height="10" rx="1.5" fill="#A78BFA"/><rect x="12" y="11" width="6" height="16" rx="1.5" fill="#60A5FA"/><rect x="21" y="3" width="6" height="24" rx="1.5" fill="none" stroke="#FF4D6D" stroke-width="1.6" stroke-dasharray="2.4 2"/><rect x="21" y="9" width="6" height="18" rx="1.5" fill="#22D3EE"/></svg>ChartTruth</a>
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="1" y="14" width="6" height="11" fill="#111110"/><rect x="10" y="8" width="6" height="17" fill="#111110"/><rect x="19" y="1" width="6" height="24" fill="none" stroke="#FF4F00" stroke-width="1.4" stroke-dasharray="2 1.6"/><rect x="19" y="10" width="6" height="15" fill="#FF4F00"/></svg>ChartTruth<small>CT-1</small></a>
     <nav class="tabs" role="tablist" aria-label="Sections">
       <button role="tab" aria-selected="true" aria-controls="tab-check" id="t-check" data-tab="check">Check a chart</button>
       <button role="tab" aria-selected="false" aria-controls="tab-play" id="t-play" data-tab="play">Spot the lie</button>
       <button role="tab" aria-selected="false" aria-controls="tab-learn" id="t-learn" data-tab="learn">Learn</button>
     </nav>
-    <span class="helpwrap"><button class="iconbtn" id="helpBtn" aria-label="Help and keyboard shortcuts" title="Help (?)">?</button></span>
+    <button class="qbtn" id="helpBtn" aria-label="Help and keyboard shortcuts" title="Help (?)">?</button>
   </div>
 </header>
 
 <main class="wrap">
 <!-- ================= CHECK ================= -->
 <section class="tab on" id="tab-check" role="tabpanel" aria-labelledby="t-check">
-  <div class="intro">
+  <div class="hero">
     <div>
-      <p class="hud">Chart scanner · WAICY 2026</p>
-      <h1 style="margin-top:12px">Is this chart lying to you?</h1>
-      <p>Give ChartTruth a chart. It finds the trick, tells you how big the distortion is, and draws the honest version.</p>
+      <p class="lab">A chart checker for the WAICY 2026 AI Showcase</p>
+      <h1>Is this chart <span>lying</span> to you?</h1>
+      <p class="sub">Give ChartTruth a chart. It finds the trick, measures how big the distortion is, and draws the honest version.</p>
     </div>
-    <ol class="stepper" id="stepper">
-      <li data-go="step1"><span class="n"><span>1</span></span><div><b>Pick a chart</b><span>Upload, paste or try an example</span></div></li>
-      <li data-go="step2"><span class="n"><span>2</span></span><div><b>See what’s wrong</b><span>A plain verdict and the honest redraw</span></div></li>
-      <li data-go="step3"><span class="n"><span>3</span></span><div><b>Share the truth</b><span>Caption, image or link</span></div></li>
+    <ol class="steps" id="stepper">
+      <li data-go="step1"><span class="n">01</span><div><b>Pick a chart</b><span class="d">Upload, paste, or try an example</span></div><span class="st"></span></li>
+      <li data-go="step2"><span class="n">02</span><div><b>See what’s wrong</b><span class="d">A plain verdict and the honest redraw</span></div><span class="st"></span></li>
+      <li data-go="step3"><span class="n">03</span><div><b>Share the truth</b><span class="d">Caption, image or link</span></div><span class="st"></span></li>
     </ol>
   </div>
 
-  <!-- STEP 1 -->
-  <div class="step panel glow" id="step1">
-    <div class="shead"><span class="n">1</span><h2>Pick a chart</h2></div>
-    <div class="pick">
-      <div class="drop" id="drop" role="button" tabindex="0" aria-label="Upload a chart image">
-        <span class="big" aria-hidden="true">+</span>
-        <b>Upload your chart</b>
-        <span>Click to choose an image, drop it here, or paste a screenshot with <kbd>Ctrl</kbd> <kbd>V</kbd></span>
-        <span class="small">PNG, JPG or WebP</span>
-      </div>
-      <input type="file" id="file" accept="image/png,image/jpeg,image/webp" hidden>
-      <div>
-        <div class="exhead"><b>Or try an example</b><span class="small">Two of them are honest</span></div>
-        <div class="exgrid" id="examples" role="group" aria-label="Example charts"></div>
-      </div>
-    </div>
-
-    <div class="read" id="readPanel" hidden>
-      <div class="prev"><img id="prevImg" alt="Your uploaded chart"><div class="scan" id="scan"></div></div>
-      <div>
-        <h3>Next: read the numbers in your chart</h3>
-        <p class="small">ChartTruth needs the values before it can check the design. Choose one:</p>
-        <div class="choices">
-          <div class="choice">
-            <h4>Let AI read it</h4>
-            <p>Fast. Uses your own free API key, which stays in this tab.</p>
-            <div class="seg" id="provSeg" role="group" aria-label="Which AI reads the chart"><button data-p="gemini" aria-pressed="true">Gemini</button><button data-p="claude" aria-pressed="false">Claude</button><button data-p="both" aria-pressed="false">Both (cross-check)</button></div>
-            <label class="field" id="fGem">Gemini key <input class="in" type="password" id="gKey" placeholder="Paste your Gemini API key" autocomplete="off"></label>
-            <label class="field" id="fCla" hidden>Claude key <input class="in" type="password" id="cKey" placeholder="Paste your Anthropic API key" autocomplete="off"></label>
-            <details class="more"><summary>Model and key options</summary>
-              <label class="field">Gemini model <input class="in" id="gModel" list="gModels" value="gemini-3.5-flash"></label>
-              <label class="field">Claude model <input class="in" id="cModel" list="cModels" value="claude-sonnet-5-5"></label>
-              <datalist id="gModels"><option value="gemini-3.5-flash"><option value="gemini-3.1-flash-lite"></datalist>
-              <datalist id="cModels"><option value="claude-sonnet-5-5"><option value="claude-haiku-5-5"><option value="claude-opus-5-5"></datalist>
-              <label class="chk"><input type="checkbox" id="remember"> Keep my keys until I close this tab</label>
-              <p class="small">Get a free key: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Gemini</a> or <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Claude</a>.</p>
-            </details>
-            <button class="btn" id="analyze" disabled style="margin-top:8px">Read my chart</button><p class="small" id="keyHint" style="margin-top:8px">Paste a key above to turn this on.</p>
-          </div>
-          <div class="choice">
-            <h4>Type the numbers myself</h4>
-            <p>No key needed. Enter the labels, values and axis range you see in the chart.</p>
-            <button class="btn alt" id="manualBtn">Enter numbers</button>
-          </div>
+  <div class="sec" id="step1">
+    <div class="gut"><span class="no">01</span><h2>Pick a chart</h2><p>Your own image, or one of eight examples.</p></div>
+    <div>
+      <div class="pick">
+        <div class="drop" id="drop" role="button" tabindex="0" aria-label="Upload a chart image">
+          <span class="plus" aria-hidden="true">+</span>
+          <div><b>Upload your chart</b><span>Click to choose an image, drop it anywhere on the page, or paste a screenshot with <kbd>Ctrl</kbd> <kbd>V</kbd>. PNG, JPG or WebP.</span></div>
         </div>
-        <p class="status" id="status" role="status" aria-live="polite"></p>
+        <input type="file" id="file" accept="image/png,image/jpeg,image/webp" hidden>
+        <div>
+          <div class="exhead"><b>Or try an example</b><span class="hint">Two of the eight are honest</span></div>
+          <div class="exgrid" id="examples" role="group" aria-label="Example charts"></div>
+        </div>
+      </div>
+
+      <div class="read" id="readPanel" hidden>
+        <div class="prev"><img id="prevImg" alt="Your uploaded chart"><div class="scan" id="scan"></div></div>
+        <div>
+          <h3>Now get the numbers out of your chart</h3>
+          <p>ChartTruth checks the design using the chart’s values. Choose how to get them:</p>
+          <div class="choices">
+            <div class="choice">
+              <h4>Let AI read it</h4>
+              <p>Fast. Uses your own free API key, which stays in this tab.</p>
+              <div class="seg" id="provSeg" role="group" aria-label="Which AI reads the chart"><button data-p="gemini" aria-pressed="true">Gemini</button><button data-p="claude" aria-pressed="false">Claude</button><button data-p="both" aria-pressed="false">Both</button></div>
+              <label class="field" id="fGem">Gemini key<input class="in" type="password" id="gKey" placeholder="Paste your Gemini API key" autocomplete="off"></label>
+              <label class="field" id="fCla" hidden>Claude key<input class="in" type="password" id="cKey" placeholder="Paste your Anthropic API key" autocomplete="off"></label>
+              <details class="more"><summary>Models and key settings</summary>
+                <label class="field">Gemini model<input class="in" id="gModel" list="gModels" value="gemini-3.5-flash"></label>
+                <label class="field">Claude model<input class="in" id="cModel" list="cModels" value="claude-sonnet-5-5"></label>
+                <datalist id="gModels"><option value="gemini-3.5-flash"><option value="gemini-3.1-flash-lite"></datalist>
+                <datalist id="cModels"><option value="claude-sonnet-5-5"><option value="claude-haiku-5-5"><option value="claude-opus-5-5"></datalist>
+                <label class="chk"><input type="checkbox" id="remember"> Keep my keys until I close this tab</label>
+                <p class="hint">Get a free key: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Gemini</a>, <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Claude</a>. “Both” asks the two models and compares their answers.</p>
+              </details>
+              <button class="btn" id="analyze" disabled style="margin-top:10px">Read my chart</button>
+              <p class="hint" id="keyHint" style="margin-top:8px">Paste a key above to turn this on.</p>
+            </div>
+            <div class="choice">
+              <h4>Type them myself</h4>
+              <p>No key needed. Enter the labels, values and axis range you can see.</p>
+              <button class="btn alt" id="manualBtn">Enter numbers</button>
+            </div>
+          </div>
+          <p class="status" id="status" role="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- STEP 2 -->
-  <div class="step panel" id="step2">
-    <div class="shead"><span class="n">2</span><h2>What’s wrong</h2></div>
-    <div class="result">
-      <div>
-        <div id="verdict"></div>
-        <div class="why"><h3>Why</h3><ol class="find" id="findings"></ol></div>
-      </div>
-      <div>
+  <div class="sec" id="step2">
+    <div class="gut"><span class="no">02</span><h2>What’s wrong</h2><p>Drag the orange handle to compare the chart with its honest version.</p></div>
+    <div>
+      <div class="result">
+        <div>
+          <div id="verdict"></div>
+          <div class="why"><h3>Why</h3><ol class="find" id="findings"></ol></div>
+        </div>
         <div class="viewer">
-          <div class="vtop" aria-hidden="true"><span>◀ As published</span><span>Honest version ▶</span></div>
+          <i class="cm tl"></i><i class="cm tr"></i><i class="cm bl"></i><i class="cm br"></i>
+          <div class="vtop" aria-hidden="true"><span><b>A</b> As published</span><span><b>B</b> Honest version</span></div>
           <div class="wipe" id="wipe" style="--x:50%">
             <div class="under" id="under"></div><div class="over" id="over"></div><div class="sweep" id="sweepfx"></div>
-            <div class="handle" id="handle" role="slider" tabindex="0" aria-label="Compare the published chart with the honest version" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><span aria-hidden="true">⟷</span></div>
+            <div class="handle" id="handle" role="slider" tabindex="0" aria-label="Compare the published chart with the honest version" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><span aria-hidden="true">↔</span></div>
           </div>
-          <div class="vbar"><span>Drag the circle to compare. Red marks show the problems.</span><label class="chk" id="zeroWrap" hidden><input type="checkbox" id="lineZero"> Show the honest line from zero</label></div>
+          <div class="vbar"><span>Red pen marks the problems. Green marks the fixes.</span><label class="chk" id="zeroWrap" hidden><input type="checkbox" id="lineZero"> Draw the honest line from zero</label></div>
         </div>
       </div>
+      <details class="numbers" id="numbers">
+        <summary>Check the numbers <small id="numHint">The AI only reads values. Fix anything it got wrong.</small></summary>
+        <div class="nbody">
+          <div id="disBox"></div>
+          <div class="edtools"><button class="btn alt sm" id="undoBtn" disabled>Undo</button><button class="btn alt sm" id="redoBtn" disabled>Redo</button><button class="btn alt sm" id="resetBtn">Reset</button></div>
+          <div id="editor"></div>
+          <details class="more" style="margin-top:10px"><summary>Raw data (JSON)</summary><pre id="raw"></pre></details>
+        </div>
+      </details>
     </div>
-    <details class="numbers" id="numbers">
-      <summary>Check the numbers <small id="numHint">The AI only reads values. Fix anything it got wrong.</small></summary>
-      <div class="nbody">
-        <div id="disBox"></div>
-        <div class="edtools"><button class="btn alt sm" id="undoBtn" disabled>Undo</button><button class="btn alt sm" id="redoBtn" disabled>Redo</button><button class="btn alt sm" id="resetBtn">Reset</button></div>
-        <div id="editor"></div>
-        <details class="more" style="margin-top:10px"><summary>Raw data (JSON)</summary><pre id="raw"></pre></details>
-      </div>
-    </details>
   </div>
 
-  <!-- STEP 3 -->
-  <div class="step panel" id="step3">
-    <div class="shead"><span class="n">3</span><h2>Share the truth</h2></div>
-    <div class="share">
-      <div class="sbox"><div class="row"><b>Honest caption</b><button class="linkbtn" data-copy="caption">Copy</button></div><p id="caption"></p></div>
-      <div class="sbox"><div class="row"><b>Alt text for screen readers</b><button class="linkbtn" data-copy="alt">Copy</button></div><p id="alt"></p></div>
+  <div class="sec" id="step3">
+    <div class="gut"><span class="no">03</span><h2>Share the truth</h2><p>Post the honest version, not the misleading one.</p></div>
+    <div>
+      <div class="share">
+        <div class="sbox"><div class="row"><span class="lab">Honest caption</span><button class="linkbtn" data-copy="caption">Copy</button></div><p id="caption"></p></div>
+        <div class="sbox"><div class="row"><span class="lab">Alt text for screen readers</span><button class="linkbtn" data-copy="alt">Copy</button></div><p id="alt"></p></div>
+      </div>
+      <div class="sactions"><button class="btn" id="exportBtn">Download image</button><button class="btn alt" id="shareBtn">Copy link</button><button class="btn alt" id="csvBtn">Download data (CSV)</button><button class="btn alt" data-copy="json">Copy report (JSON)</button></div>
     </div>
-    <div class="sactions"><button class="btn" id="exportBtn">Download image</button><button class="btn alt" id="shareBtn">Copy link</button><button class="btn alt" id="csvBtn">Download data (CSV)</button><button class="btn alt" data-copy="json">Copy report (JSON)</button></div>
   </div>
 </section>
 
 <!-- ================= PLAY ================= -->
 <section class="tab" id="tab-play" role="tabpanel" aria-labelledby="t-play">
-  <div class="intro" style="grid-template-columns:1fr">
-    <div><p class="hud">Training mode</p><h1 style="margin-top:12px">Spot the lie</h1><p>Eight new charts every game. Some are honest. Pick what’s wrong, and the same rule engine that checks real charts marks your answer. Keys 1 to 6 work too.</p></div>
-  </div>
-  <div class="game">
-    <div class="gchart" id="gChart"></div>
-    <div class="panel glow">
-      <div class="score"><b id="gScore">0</b><span id="gRound">Round 1 of 8</span></div>
-      <div class="prog" id="gProg"></div>
-      <h3 id="gQ" style="font:700 18px var(--d)">What’s wrong with this chart?</h3>
-      <div class="opts" id="gOpts"></div>
-      <div id="gFb"></div>
+  <div class="hero" style="grid-template-columns:1fr"><div><p class="lab">Training mode</p><h1>Spot the lie</h1><p class="sub">Eight new charts every game, some of them honest. Pick what’s wrong; the same rules that check real charts mark your answer. Keys 1 to 6 work too.</p></div></div>
+  <div class="sec" style="grid-template-columns:1fr">
+    <div class="game">
+      <div class="gchart" id="gChart"></div>
+      <div>
+        <div class="scorebox"><b id="gScore">0</b><span id="gRound">Round 1 of 8</span></div>
+        <div class="prog" id="gProg"></div>
+        <h3 class="gq" id="gQ">What’s wrong with this chart?</h3>
+        <div class="opts" id="gOpts"></div>
+        <div id="gFb"></div>
+      </div>
     </div>
   </div>
 </section>
 
 <!-- ================= LEARN ================= -->
 <section class="tab" id="tab-learn" role="tabpanel" aria-labelledby="t-learn">
-  <div class="intro" style="grid-template-columns:1fr;margin-bottom:0">
-    <div><p class="hud">Knowledge base</p><h1 style="margin-top:12px">How charts lie, and how we catch it</h1></div>
-  </div>
+  <div class="hero" style="grid-template-columns:1fr;border-bottom:0;padding-bottom:24px"><div><p class="lab">Reference</p><h1>How charts lie, and how ChartTruth catches it</h1></div></div>
   <nav class="subnav" aria-label="Learn sections"><a href="#l-tricks">Six tricks</a><a href="#l-lab">Try it yourself</a><a href="#l-how">How it works</a><a href="#l-evidence">Evidence</a><a href="#l-standards">Our rules</a></nav>
 
-  <div class="lsec" id="l-tricks"><h2>Six tricks ChartTruth catches</h2><p class="lead">Each is a clear rule, not an opinion. Open any example to see the marks and the math.</p><div class="tricks" id="trickGrid"></div></div>
+  <div class="sec" id="l-tricks"><div class="gut"><span class="no">L1</span><h2>Six tricks</h2><p>Each is a clear rule, not an opinion.</p></div><div><div class="tricks" id="trickGrid"></div></div></div>
 
-  <div class="lsec" id="l-lab"><h2>Try it yourself</h2><p class="lead">Four stores scored 87, 90, 93 and 96. Change only the design and watch the picture drift from the data.</p>
+  <div class="sec" id="l-lab"><div class="gut"><span class="no">L2</span><h2>Try it yourself</h2><p>Four stores scored 87, 90, 93 and 96. Only the design changes.</p></div>
     <div class="labgrid">
-      <div class="panel ctrl">
+      <div class="ctrl">
         <div class="range"><label for="labStart">Axis starts at <output id="labStartV">0%</output></label><input type="range" id="labStart" min="0" max="86" value="0"></div>
         <div style="display:grid"><label class="chk"><input type="checkbox" id="lab3d"> Add 3D</label><label class="chk"><input type="checkbox" id="labInv"> Flip the axis</label><label class="chk"><input type="checkbox" id="labTicks"> Uneven ticks</label></div>
         <div class="trio"><div><b id="kVis">—</b><small>D looks</small></div><div><b id="kData">—</b><small>D really is</small></div><div><b id="kLf">—</b><small>Exaggeration</small></div></div>
-        <p class="small">Times bigger than Store A. Over 1.25× counts as misleading.</p>
+        <p class="hint">Times bigger than Store A. Over 1.25× counts as misleading.</p>
         <div id="labVerdict"></div>
         <button class="btn alt sm" id="labReset" style="justify-self:start">Reset</button>
       </div>
@@ -487,45 +488,49 @@ dialog::backdrop{background:rgba(2,4,10,.7);backdrop-filter:blur(4px)}
     </div>
   </div>
 
-  <div class="lsec" id="l-how"><h2>The AI reads. The math decides.</h2><p class="lead">Asking a chatbot “is this misleading?” gives an opinion you can’t check. ChartTruth splits the job so every verdict traces back to numbers.</p>
-    <ol class="pipe">
-      <li class="ai"><h3>AI reads</h3><p>Gemini or Claude turns the image into numbers and visual cues. Cross-check mode uses both and compares them.</p></li>
-      <li><h3>You check</h3><p>Every number is editable, with undo. When the AI is unsure or the two models disagree, ChartTruth waits for you.</p></li>
-      <li class="m"><h3>Rules decide</h3><p>Exaggeration (lie factor), tick spacing, slice sums, flipped axes, two axes and 3D, plus a guardrail for honest zoomed charts.</p></li>
-      <li class="m"><h3>Honest redraw</h3><p>Zero baseline, even ticks, upright, flat, pies rescaled to 100%, with a caption and alt text.</p></li>
-    </ol>
-    <div class="vs"><div><h3>Asking an AI directly</h3><ul><li>Answer can change between runs</li><li>Can’t show its working</li><li>Often flags any axis not at zero</li><li>Can’t be corrected</li></ul></div>
-      <div class="us"><h3>ChartTruth</h3><ul><li>Same numbers, same verdict</li><li>Every flag shows its math</li><li>Guardrail protects honest science charts</li><li>Fix a number and the verdict updates</li></ul></div></div>
+  <div class="sec" id="l-how"><div class="gut"><span class="no">L3</span><h2>How it works</h2><p>The AI reads. The math decides.</p></div>
+    <div>
+      <ol class="pipe">
+        <li><span class="k ai">AI</span><h3>Read</h3><p>Gemini or Claude turns the image into numbers and visual cues. “Both” mode compares two models.</p></li>
+        <li><span class="k">Person</span><h3>Check</h3><p>Every number is editable, with undo. When the AI is unsure or the models disagree, ChartTruth waits for you.</p></li>
+        <li><span class="k">Rules</span><h3>Decide</h3><p>Exaggeration (lie factor), tick spacing, slice sums, flipped axes, two axes, 3D, and a guardrail for honest zoomed charts.</p></li>
+        <li><span class="k">Rules</span><h3>Redraw</h3><p>Zero baseline, even ticks, upright, flat, pies rescaled to 100%, with a caption and alt text.</p></li>
+      </ol>
+      <div class="vs"><div><h3>Asking an AI directly</h3><ul><li>Answer can change between runs</li><li>Can’t show its working</li><li>Often flags any axis not at zero</li><li>Can’t be corrected</li></ul></div>
+        <div><h3>ChartTruth</h3><ul><li>Same numbers, same verdict</li><li>Every flag shows its math</li><li>Guardrail protects honest science charts</li><li>Fix a number and the verdict updates</li></ul></div></div>
+    </div>
   </div>
 
-  <div class="lsec" id="l-evidence"><h2>Evidence</h2><p class="lead">Computed from the official Misviz labels (UKPLab, ACL 2026): 2,077 real charts annotated by experts.</p>
-    <div class="ebig" id="ebig"></div>
-    <div class="cov" id="cov"></div>
-    <p class="small" style="margin-top:10px">Coverage means ChartTruth has a rule for that trick. It isn’t accuracy, which also depends on how well the AI reads each chart. The benchmark below measures that.</p>
-    <div class="bench">
-      <div class="panel"><h3 style="font:700 17px var(--d);margin-bottom:10px">Benchmark: ChartTruth vs asking the AI directly</h3><div id="benchOut"></div></div>
-      <div class="panel"><h3 style="font:700 17px var(--d);margin-bottom:10px">Run it on your computer</h3>
-        <pre>git clone https://github.com/UKPLab/acl2026-misviz
+  <div class="sec" id="l-evidence"><div class="gut"><span class="no">L4</span><h2>Evidence</h2><p>From the official Misviz labels (UKPLab, ACL 2026): 2,077 real charts annotated by experts.</p></div>
+    <div>
+      <div class="ebig" id="ebig"></div>
+      <div class="cov" id="cov"></div>
+      <p class="hint" style="margin-top:10px">Coverage means ChartTruth has a rule for that trick. It isn’t accuracy, which also depends on how well the AI reads each chart; the benchmark measures that.</p>
+      <div class="bench">
+        <div><p class="lab" style="margin-bottom:10px">Benchmark: ChartTruth vs asking the AI directly</p><div id="benchOut"></div></div>
+        <div><p class="lab" style="margin-bottom:10px">Run it on your computer</p>
+          <pre>git clone https://github.com/UKPLab/acl2026-misviz
 pip install google-genai anthropic pillow
 export GEMINI_API_KEY=...  ANTHROPIC_API_KEY=...
 python eval_misviz.py --source github \
   --misviz-json acl2026-misviz/data/misviz/misviz.json \
   --provider both --misleading 30 --clean 15</pre>
-        <p class="small" style="margin:10px 0 6px">Then paste <code>results.json</code>:</p>
-        <textarea id="benchJson" spellcheck="false" aria-label="Benchmark results JSON"></textarea>
-        <div class="sactions"><button class="btn sm" id="benchRender">Show results</button><button class="btn alt sm" id="benchSample">Sample layout</button></div>
-        <p class="status" id="benchStatus"></p></div>
+          <p class="hint" style="margin:10px 0 6px">Then paste <code>results.json</code>:</p>
+          <textarea id="benchJson" spellcheck="false" aria-label="Benchmark results JSON"></textarea>
+          <div class="sactions"><button class="btn sm" id="benchRender">Show results</button><button class="btn alt sm" id="benchSample">Sample layout</button></div>
+          <p class="status" id="benchStatus"></p></div>
+      </div>
     </div>
   </div>
 
-  <div class="lsec" id="l-standards"><h2>Our rules for ourselves</h2>
+  <div class="sec" id="l-standards"><div class="gut"><span class="no">L5</span><h2>Our rules</h2><p>A tool that calls things misleading has to hold itself to a higher bar.</p></div>
     <div class="std">
       <div><h3>No guessing</h3><p>Below 60% confidence, or when two models disagree, it says “can’t verify yet”.</p></div>
       <div><h3>No false alarms</h3><p>Zoomed science and finance line charts get a neutral note, not a misleading flag.</p></div>
       <div><h3>Design, not people</h3><p>A flag describes the chart’s design. It never claims anyone meant to deceive.</p></div>
       <div><h3>You’re in control</h3><p>Every value is editable, with undo, and you can mark the data as checked.</p></div>
       <div><h3>Private</h3><p>No servers, no tracking. Images go to an AI only with your own key.</p></div>
-      <div><h3>Accessible</h3><p>Alt text for every correction, keyboard support, reduced motion.</p></div>
+      <div><h3>Accessible</h3><p>Alt text for every correction, full keyboard support, reduced motion.</p></div>
       <div><h3>Honest limits</h3><p>One data series at a time. It can’t catch cherry-picked dates, bad captions or bad source data.</p></div>
       <div><h3>Open method</h3><p>The lie factor follows Edward Tufte’s idea. Rules, prompts and benchmark code are public.</p></div>
     </div>
@@ -533,14 +538,14 @@ python eval_misviz.py --source github \
 </section>
 </main>
 
-<footer><div class="wrap"><span>ChartTruth runs entirely in your browser. Example and game charts use illustrative numbers. Misviz © UKPLab, CC BY-SA 4.0.</span><span><a href="https://github.com/yersultan2000/charttruth">Source code</a></span></div></footer>
+<footer><div class="wrap"><span>ChartTruth runs entirely in your browser. Example and game charts use illustrative numbers. Misviz © UKPLab, CC BY-SA 4.0.</span><a href="https://github.com/yersultan2000/charttruth">Source code</a></div></footer>
 
 <div class="toasts" id="toasts" aria-live="polite"></div>
-<div class="dropall" id="dropall" hidden><div><b>Drop to check this chart</b><span class="small">PNG, JPG or WebP</span></div></div>
+<div class="dropall" id="dropall" hidden><div><b>Drop to check this chart</b><span class="hint">PNG, JPG or WebP</span></div></div>
 <dialog id="helpDlg" aria-labelledby="hd-h"><div class="dlg"><h3 id="hd-h">How to use ChartTruth</h3>
-  <ol><li><b>Pick a chart.</b> Upload or paste an image, or click an example.</li><li><b>Read the numbers.</b> Let Gemini or Claude read them, or type them yourself.</li><li><b>See what’s wrong.</b> The verdict explains the problem. Drag the circle to compare the published and honest charts.</li><li><b>Share.</b> Copy the honest caption, download the image, or copy a link.</li></ol>
+  <ol><li><b>Pick a chart.</b> Upload or paste an image, or click an example.</li><li><b>Get the numbers.</b> Let Gemini or Claude read them, or type them yourself.</li><li><b>See what’s wrong.</b> Drag the orange handle to compare the published and honest charts.</li><li><b>Share.</b> Copy the honest caption, download the image, or copy a link.</li></ol>
   <h3>Shortcuts</h3>
-  <div class="keys"><span><kbd>1</kbd>–<kbd>8</kbd></span><span>Open an example (or answer in Spot the lie)</span><span><kbd>Ctrl</kbd> <kbd>V</kbd></span><span>Paste a chart image</span><span><kbd>U</kbd></span><span>Upload a chart</span><span><kbd>[</kbd> <kbd>]</kbd></span><span>Move the compare slider</span><span><kbd>Ctrl</kbd> <kbd>Z</kbd></span><span>Undo a number change</span><span><kbd>?</kbd></span><span>This help</span></div>
+  <div class="keys"><span><kbd>1</kbd>–<kbd>8</kbd></span><span>Open an example (or answer in Spot the lie)</span><span><kbd>Ctrl</kbd> <kbd>V</kbd></span><span>Paste a chart image</span><span><kbd>U</kbd></span><span>Upload a chart</span><span><kbd>[</kbd> <kbd>]</kbd></span><span>Move the compare handle</span><span><kbd>Ctrl</kbd> <kbd>Z</kbd></span><span>Undo a number change</span><span><kbd>?</kbd></span><span>This help</span></div>
   <div style="margin-top:20px;text-align:right"><button class="btn sm" id="helpClose">Got it</button></div></div></dialog>
 
 <script>
@@ -641,8 +646,8 @@ function audit(s){
 // ================= helpers =================
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const C={bad:'#FF4D6D',warn:'#FFB020',ok:'#2EE6A6',cyan:'#22D3EE',muted:'#7D8AB0',red:'#C81E3A',amber:'#B45309'};
-const HONEST_PAL=['#22D3EE','#A78BFA','#2EE6A6','#FFB020','#F472B6','#60A5FA'];
+const C={bad:'#D8361A',warn:'#A86F00',ok:'#1F7A45',sig:'#FF4F00',muted:'#6B6B66',red:'#C81E3A',amber:'#B45309'};
+const HONEST_PAL=['#111110','#FF4F00','#8A8A84','#3D3D3A','#C9C9C3','#B35A2A'];
 const NEWS_PAL=['#E8590C','#1971C2','#2F9E44','#F08C00','#7048E8','#C2255C'];
 const shade=(hex,f)=>{const n=parseInt(hex.slice(1),16);return '#'+[n>>16,(n>>8)&255,n&255].map(c=>Math.max(0,Math.min(255,Math.round(c*f))).toString(16).padStart(2,'0')).join('');};
 const clip=(t,n)=>{t=String(t);return t.length>n?t.slice(0,n-1)+'…':t;};
@@ -697,12 +702,11 @@ function renderSVG(s,o={}){
   const dual=!honest&&s.has_dual_axis&&Array.isArray(s.series2)&&s.series2.some(Number.isFinite);
   const W=560,L=thumb?18:64,R=thumb?16:(dual?60:24),T=thumb?14:58,PH=thumb?300:250,B=thumb?14:46+(rows?rows*28+8:0);
   const H=T+PH+B,pw=W-L-R,ph=PH;
-  const F='font-family="Arial,Helvetica,sans-serif"', HF='font-family="Space Grotesk,system-ui,sans-serif"', PEN='font-family="Caveat,Segoe Print,cursive"';
-  const ink=honest?'#E6EDFF':'#111', sub=honest?'#8C9BC4':'#5c6270', grid=honest?'#1C2A4A':'#DEDDD6';
+  const F='font-family="Arial,Helvetica,sans-serif"', HF='font-family="Archivo,Helvetica Neue,Arial,sans-serif"', PEN='font-family="Caveat,Segoe Print,cursive"';
+  const ink=honest?'#111110':'#111', sub=honest?'#6B6B66':'#5c6270', grid=honest?'#E2E2DD':'#DEDDD6';
   const p=pts(s), vals=p.map(d=>d.value), u=s.unit||'';
   let out=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc((honest?'Honest version: ':'As published: ')+s.title)}">`;
-  if(honest) out+=`<defs><linearGradient id="ctg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#67E8F9"/><stop offset="1" stop-color="#3B82F6"/></linearGradient></defs>`;
-  out+=`<rect width="${W}" height="${H}" fill="${honest?'#0B1224':'#F6F5F0'}"/>`;
+  out+=`<rect width="${W}" height="${H}" fill="${honest?'#FBFBF9':'#F6F5F0'}"/>`;
   if(!thumb) out+=`<text x="${W/2}" y="32" text-anchor="middle" ${honest?HF:F} font-size="18" font-weight="700" fill="${ink}">${esc(clip(s.title,50))}</text>`;
   if(!p.length) return out+(o.empty?`<text x="${W/2}" y="${T+ph/2}" text-anchor="middle" ${HF} font-size="16" fill="${sub}">${esc(o.empty)}</text>`:'')+'</svg>';
   const notes=[], addNote=(sev,text)=>{notes.push({sev,text});return notes.length;};
@@ -718,10 +722,10 @@ function renderSVG(s,o={}){
     if(depth) sl.forEach(q=>[[0,Math.PI],[2*Math.PI,3*Math.PI]].forEach(([f0,f1])=>{const s0=Math.max(q.a0,f0),s1=Math.min(q.a1,f1);
       if(s1>s0) body+=`<path d="M${P(s0)} A${r},${r*k} 0 0 1 ${P(s1)} L${P(s1,depth)} A${r},${r*k} 0 0 0 ${P(s0,depth)} Z" fill="${shade(q.col,.68)}"/>`;}));
     sl.forEach((q,i)=>{const lg=(q.a1-q.a0)>Math.PI?1:0, full=(q.a1-q.a0)>=2*Math.PI-1e-6;
-      body+=full?`<ellipse cx="${cx}" cy="${cy}" rx="${r}" ry="${r*k}" fill="${q.col}"/>`:`<path d="M${cx},${cy} L${P(q.a0)} A${r},${r*k} 0 ${lg} 1 ${P(q.a1)} Z" fill="${q.col}" stroke="${honest?'#0B1224':'#F6F5F0'}" stroke-width="2.5"/>`;
+      body+=full?`<ellipse cx="${cx}" cy="${cy}" rx="${r}" ry="${r*k}" fill="${q.col}"/>`:`<path d="M${cx},${cy} L${P(q.a0)} A${r},${r*k} 0 ${lg} 1 ${P(q.a1)} Z" fill="${q.col}" stroke="${honest?'#FBFBF9':'#F6F5F0'}" stroke-width="2.5"/>`;
       if(thumb) return;
       const m=(q.a0+q.a1)/2;
-      if(q.a1-q.a0>0.3) body+=`<text x="${cx+r*.62*Math.cos(m)}" y="${cy+r*k*.62*Math.sin(m)+5}" text-anchor="middle" ${honest?HF:F} font-size="14.5" font-weight="700" fill="${honest?'#05070F':'#fff'}">${esc(fmt(q.d.value,1))}${s.values_are_percent?'%':''}</text>`;
+      if(q.a1-q.a0>0.3) body+=`<text x="${cx+r*.62*Math.cos(m)}" y="${cy+r*k*.62*Math.sin(m)+5}" text-anchor="middle" ${honest?HF:F} font-size="14.5" font-weight="700" fill="#fff">${esc(fmt(q.d.value,1))}${s.values_are_percent?'%':''}</text>`;
       body+=`<rect x="352" y="${T+40+i*28}" width="14" height="14" rx="3" fill="${q.col}"/><text x="374" y="${T+52+i*28}" ${honest?HF:F} font-size="14" fill="${ink}">${esc(clip(q.d.label,18))}${honest?` <tspan fill="${sub}">${esc(fmt(q.d.value,1))}%</tspan>`:''}</text>`;});
     flags.forEach(f=>{
       const n=addNote(f.sev,f.tag==='misrepresentation'?`${vals.map(v=>fmt(v,1)).join(' + ')} = ${fmt(vals.reduce((a,b)=>a+b,0),1)}%, not 100%`:f.tag==='3D'?'3D tilt inflates the front slice':f.tag==='dual axis'?'Two scales on one chart':clip(f.text.split('.')[0],44));
@@ -738,15 +742,15 @@ function renderSVG(s,o={}){
     const zeroV=(ticks[0]<=0&&ticks[n-1]>=0)?0:ticks[0], base=yP(zeroV), band=pw/p.length;
     if(s.chart_type==='bar'){
       const bw=band*(thumb?0.6:0.56),dx=s.has_3d_effect?13:0,dy=s.has_3d_effect?-9:0;
-      p.forEach((d,i)=>{const col=honest?'url(#ctg)':NEWS_PAL[i%NEWS_PAL.length],x=L+i*band+(band-bw)/2,y=yP(d.value),top=Math.min(y,base),h=Math.abs(base-y);
+      p.forEach((d,i)=>{const col=honest?'#1C1C1A':NEWS_PAL[i%NEWS_PAL.length],x=L+i*band+(band-bw)/2,y=yP(d.value),top=Math.min(y,base),h=Math.abs(base-y);
         if(dx){const c0=NEWS_PAL[i%NEWS_PAL.length];body+=`<polygon points="${x+bw},${top} ${x+bw+dx},${top+dy} ${x+bw+dx},${top+h+dy} ${x+bw},${top+h}" fill="${shade(c0,.7)}"/><polygon points="${x},${top} ${x+dx},${top+dy} ${x+bw+dx},${top+dy} ${x+bw},${top}" fill="${shade(c0,1.25)}"/>`;}
-        body+=`<rect x="${x}" y="${top}" width="${bw}" height="${Math.max(h,0.5)}" fill="${col}" ${honest?'rx="3"':''}/>`;
+        body+=`<rect x="${x}" y="${top}" width="${bw}" height="${Math.max(h,0.5)}" fill="${col}" />`;
         if(thumb) return;
         const ly=s.is_inverted_y?top+h+17:top-8+dy;
         body+=`<text x="${x+bw/2}" y="${ly}" text-anchor="middle" ${honest?HF:F} font-size="13.5" font-weight="700" fill="${ink}">${esc(fmt(d.value,2))}${esc(u)}</text>`;
-        body+=`<text x="${x+bw/2}" y="${T+ph+22}" text-anchor="middle" ${honest?HF:F} font-size="12.5" fill="${honest?'#B4C0E0':'#333'}">${esc(clip(d.label,16))}</text>`;});
+        body+=`<text x="${x+bw/2}" y="${T+ph+22}" text-anchor="middle" ${honest?HF:F} font-size="12.5" fill="#333">${esc(clip(d.label,16))}</text>`;});
     } else {
-      const col=honest?'#22D3EE':(s.is_inverted_y?'#8f1d1d':'#1971C2');
+      const col=honest?'#111110':(s.is_inverted_y?'#8f1d1d':'#1971C2');
       const xy=p.map((d,i)=>[L+band*(i+.5),yP(d.value)]);
       const area=honest?(o.lineZero?.12:0):(s.is_inverted_y?.85:.13);
       if(area) body+=`<polygon points="${xy[0][0]},${base} ${xy.map(q=>q.join(',')).join(' ')} ${xy[xy.length-1][0]},${base}" fill="${s.is_inverted_y&&!honest?'#c92a2a':col}" fill-opacity="${area}"/>`;
@@ -757,12 +761,11 @@ function renderSVG(s,o={}){
         body+=`<polyline points="${xy2.map(q=>q.join(',')).join(' ')}" fill="none" stroke="#EA580C" stroke-width="${thumb?5:2.5}"/>`;
         if(!thumb) body+=`<text x="${L+pw-4}" y="${T+14}" text-anchor="end" ${F} font-size="12.5" font-weight="700" fill="#c2410c">${esc(clip(s.series2_label||'Series 2',26))} →</text><text x="${L+6}" y="${T+14}" ${F} font-size="12.5" font-weight="700" fill="#1971C2">← ${esc(clip(s.title.split(' vs ')[0],26))}</text>`;
       }
-      if(honest&&!thumb) body+=`<polyline points="${xy.map(q=>q.join(',')).join(' ')}" fill="none" stroke="${col}" stroke-width="8" stroke-opacity=".18" stroke-linejoin="round"/>`;
       body+=`<polyline points="${xy.map(q=>q.join(',')).join(' ')}" fill="none" stroke="${col}" stroke-width="${thumb?5:2.6}" stroke-linejoin="round"/>`;
-      if(!thumb) xy.forEach((q,i)=>{body+=`<circle cx="${q[0]}" cy="${q[1]}" r="3.8" fill="${honest?'#0B1224':'#fff'}" stroke="${col}" stroke-width="2"/>`;
-        if(p.length<=10||i%2===0) body+=`<text x="${q[0]}" y="${T+ph+22}" text-anchor="middle" ${honest?HF:F} font-size="12" fill="${honest?'#B4C0E0':'#333'}">${esc(clip(p[i].label,10))}</text>`;});
+      if(!thumb) xy.forEach((q,i)=>{body+=`<circle cx="${q[0]}" cy="${q[1]}" r="3.8" fill="${honest?'#FBFBF9':'#fff'}" stroke="${col}" stroke-width="2"/>`;
+        if(p.length<=10||i%2===0) body+=`<text x="${q[0]}" y="${T+ph+22}" text-anchor="middle" ${honest?HF:F} font-size="12" fill="#333">${esc(clip(p[i].label,10))}</text>`;});
     }
-    if(honest&&!thumb) body+=`<line x1="${L}" x2="${L+pw}" y1="${base}" y2="${base}" stroke="#67E8F9" stroke-width="1.5"/>`;
+    if(honest&&!thumb) body+=`<line x1="${L}" x2="${L+pw}" y1="${base}" y2="${base}" stroke="#FF4F00" stroke-width="2"/>`;
     else if(!thumb) body+=`<line x1="${L}" x2="${L}" y1="${T}" y2="${T+ph}" stroke="#9a9890"/>`;
     flags.forEach(f=>{
       if(f.tag==='truncated axis'||f.tag==='context-dependent zoom'||f.tag==='zoomed line axis'){
@@ -780,7 +783,7 @@ function renderSVG(s,o={}){
   }
   const ny=T+ph+(s.chart_type==='pie'?30:52);
   if(!honest) notes.forEach((q,i)=>{const y=ny+i*28; body+=mark(L+2,y-6,i+1,q.sev)+`<text x="${L+20}" y="${y}" ${PEN} font-size="23" font-weight="600" fill="${pen(q.sev)}">${esc(q.text)}</text>`;});
-  else (o.fixes||[]).forEach((t,i)=>{const y=ny+i*28,cx=W-R-8; body+=`<circle cx="${cx}" cy="${y-6}" r="10" fill="${C.ok}"/><path d="M${cx-5},${y-6} l4,4 l6,-8" stroke="#05070F" stroke-width="2.2" fill="none"/><text x="${cx-18}" y="${y}" text-anchor="end" ${HF} font-size="16" font-weight="600" fill="${C.ok}">${esc(t)}</text>`;});
+  else (o.fixes||[]).forEach((t,i)=>{const y=ny+i*28,cx=W-R-8; body+=`<circle cx="${cx}" cy="${y-6}" r="10" fill="${C.ok}"/><path d="M${cx-5},${y-6} l4,4 l6,-8" stroke="#fff" stroke-width="2.2" fill="none"/><text x="${cx-18}" y="${y}" text-anchor="end" ${PEN} font-size="23" font-weight="600" fill="${C.ok}">${esc(t)}</text>`;});
   return out+body+'</svg>';
 }
 function fixesFor(res,lineZero){return [...new Set(res.flags.map(f=>f.tag==='context-dependent zoom'&&lineZero?'Shown from zero':FIX[f.tag]).filter(Boolean))];}
@@ -882,20 +885,19 @@ let uploadSpec=null;
 function setStatus(m,c='',busy=false){const e=$('#status');e.innerHTML=(busy?'<span class="spin" aria-hidden="true"></span>':'')+esc(m);e.className='status '+c;}
 function setX(x){x=Math.max(0,Math.min(100,x));state.x=x;$('#wipe').style.setProperty('--x',x+'%');const h=$('#handle');h.setAttribute('aria-valuenow',Math.round(x));h.setAttribute('aria-valuetext',x<15?'Showing the published chart':x>85?'Showing the honest version':'Split view');}
 let animId=0;
-function sweep(){const fx=$('#sweepfx');fx.classList.remove('go');void fx.offsetWidth;if(!reduced) fx.classList.add('go');
+function sweep(){
   if(reduced){setX(50);return;}const id=++animId,t0=performance.now();
   const step=t=>{if(id!==animId) return;const k=Math.min(1,(t-t0)/1100),e=1-Math.pow(1-k,3);setX(100-50*e);if(k<1) requestAnimationFrame(step);};setX(100);requestAnimationFrame(step);}
 function setStep(){const has=!!state.spec, ok=state.res&&state.res.verdict!=='unverifiable';
   const st=[has?'done':'now',has?(ok?'done':'now'):'',ok?'now':''];
   document.querySelectorAll('#stepper li').forEach((li,i)=>{li.className=st[i];});}
 function verdictHTML(s,res){
-  const k=keyFigure(s,res), v=res.verdict, label=res.guardrail&&v==='context'?'Needs context · fine here':VLABEL[v];
-  let bars='';
+  const k=keyFigure(s,res), v=res.verdict, label=res.guardrail&&v==='context'?'Needs context, fine here':VLABEL[v];
+  let meter='';
   if(k.ratio&&Number.isFinite(k.ratio.visualRatio)){const m=Math.max(k.ratio.visualRatio,k.ratio.dataRatio);
-    bars=`<div class="bars"><div><span>Looks like</span><i style="width:${k.ratio.visualRatio/m*100}%;background:var(--bad);box-shadow:0 0 10px var(--bad)"></i><span>${fmt(k.ratio.visualRatio,2)}×</span></div><div><span>Really is</span><i style="width:${k.ratio.dataRatio/m*100}%;background:var(--ok);box-shadow:0 0 10px var(--ok)"></i><span>${fmt(k.ratio.dataRatio,2)}×</span></div></div>`;}
+    meter=`<div class="meter"><div><span>Looks</span><i class="seg2 bad" style="--w:${k.ratio.visualRatio/m*100}%"></i><b>${fmt(k.ratio.visualRatio,2)}×</b></div><div><span>Really</span><i class="seg2 ok" style="--w:${k.ratio.dataRatio/m*100}%"></i><b>${fmt(k.ratio.dataRatio,2)}×</b></div></div>`;}
   const lead=v==='unverifiable'?res.reason:(res.flags[0]?res.flags[0].text:'Starts at zero, upright, even steps, flat, and the parts add up.');
-  return `<div class="verdict v-${v}"><span class="vlabel c-${v}"><i></i>${esc(label)}</span><p class="vtitle">${esc(headline(s,res))}</p><p class="vlead">${esc(lead)}</p>
-   <div class="metric"><div class="num c-${v}">${esc(k.num)}</div><div><b>${esc(k.cap)}</b><span>${esc(k.sub)}</span></div></div>${bars}</div>`;
+  return `<div class="screen s-${v}"><div class="srow"><span class="vlabel c-${v}"><i></i>${esc(label)}</span><span class="sunit">${esc(k.cap)}</span></div><div class="readout">${esc(k.num)}</div><p class="ssub">${esc(k.sub)}</p>${meter}</div><p class="vtitle">${esc(headline(s,res))}</p><p class="vlead">${esc(lead)}</p>`;
 }
 function findingsHTML(s,res){
   if(res.verdict==='unverifiable') return `<li class="unv"><div><span class="ftag">Waiting for the numbers</span>${esc(res.reason)}<details class="math"><summary></summary><div class="calc">confidence = ${fmt(s.human_verified?1:s.confidence,2)} &lt; 0.60 → don’t judge yet</div></details></div></li>`;
@@ -985,7 +987,7 @@ function loadSpec(raw,current,dis=null,opts={}){
   if(DEMOS.some(d=>d.id===current)) store.set('ct_case',current);
 }
 function loadDemo(id,scroll=true){const d=DEMOS.find(x=>x.id===id); if(!d) return; loadSpec(JSON.parse(JSON.stringify(d.spec)),id); setStatus(''); if(scroll) go('step2');}
-$('#examples').innerHTML=DEMOS.map((d,i)=>{const s=norm(d.spec),r=audit(s);return `<button class="ex" data-id="${d.id}" aria-pressed="false"><span class="th">${renderSVG(s,{thumb:true})}</span><b><i style="color:${VCOL[r.verdict]};background:${VCOL[r.verdict]}" aria-hidden="true"></i>${esc(d.name)}</b></button>`;}).join('');
+$('#examples').innerHTML=DEMOS.map((d,i)=>{const s=norm(d.spec),r=audit(s);return `<button class="ex" data-id="${d.id}" aria-pressed="false"><span class="th">${renderSVG(s,{thumb:true})}</span><b><i style="background:${VCOL[r.verdict]}" aria-hidden="true"></i>${esc(d.name)}</b></button>`;}).join('');
 $('#examples').addEventListener('click',e=>{const b=e.target.closest('.ex'); if(b) loadDemo(b.dataset.id);});
 document.querySelectorAll('#stepper li').forEach(li=>li.addEventListener('click',()=>go(li.dataset.go)));
 {const w=$('#wipe'); let drag=false;
@@ -1015,11 +1017,11 @@ $('#exportBtn').addEventListener('click',()=>{
   const ok=res.verdict!=='unverifiable'&&pts(s).length;
   const hon=ok?nest(renderSVG(honestSpec(s,state.lineZero),{mode:'honest',lineZero:state.lineZero}),620,250,540):'';
   const lines=wrapText(headline(s,res),50);
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="#05070F"/><rect width="${W}" height="6" fill="#22D3EE"/>
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="#E7E7E3"/><rect width="${W}" height="8" fill="#FF4F00"/>
    <text x="40" y="64" ${A} font-size="18" font-weight="800" letter-spacing="3" fill="${col}">${esc(VLABEL[res.verdict].toUpperCase())}</text>
-   ${lines.map((l,i)=>`<text x="40" y="${118+i*48}" ${A} font-size="40" font-weight="800" fill="#EEF3FF">${esc(l)}</text>`).join('')}
-   <text x="40" y="236" ${A} font-size="15" font-weight="700" letter-spacing="2" fill="#FFB4C1">AS PUBLISHED</text><text x="620" y="236" ${A} font-size="15" font-weight="700" letter-spacing="2" fill="#22D3EE">HONEST VERSION</text>
-   ${pub}${hon}<text x="40" y="${H-24}" ${A} font-size="15" fill="#7D8AB0">ChartTruth: AI reads, math decides${res.lieFactor!==null&&Number.isFinite(res.lieFactor)?`. Exaggeration ${fmt(res.lieFactor)}×`:''}</text></svg>`;
+   ${lines.map((l,i)=>`<text x="40" y="${118+i*48}" ${A} font-size="40" font-weight="800" fill="#111110">${esc(l)}</text>`).join('')}
+   <text x="40" y="236" ${A} font-size="15" font-weight="700" letter-spacing="2" fill="#6B6B66">A  AS PUBLISHED</text><text x="620" y="236" ${A} font-size="15" font-weight="700" letter-spacing="2" fill="#111110">B  HONEST VERSION</text>
+   ${pub}${hon}<text x="40" y="${H-24}" ${A} font-size="15" fill="#6B6B66">ChartTruth: AI reads, math decides${res.lieFactor!==null&&Number.isFinite(res.lieFactor)?`. Exaggeration ${fmt(res.lieFactor)}×`:''}</text></svg>`;
   const img=new Image();
   img.onload=()=>{try{const c=document.createElement('canvas');c.width=W*2;c.height=H*2;const g=c.getContext('2d');g.scale(2,2);g.drawImage(img,0,0);
     c.toBlob(b=>{if(!b){toast('Could not create the image.');return;} saveFile(`charttruth-${slug(s)}.png`,b,'Image');},'image/png');}catch(e){toast('Could not create the image here.');}};
@@ -1191,7 +1193,7 @@ $('#gFb').addEventListener('click',e=>{if(e.target.id==='gNext'){
 
 // ================= LEARN =================
 $('#trickGrid').innerHTML=TRICKS.map(t=>{const d=DEMOS.find(x=>x.id===t.id),s=norm(d.spec);
-  return `<article class="trick"><div class="tth">${renderSVG(s,{thumb:true})}</div><h3>${esc(t.t)}</h3><p>${esc(t.d)}</p><code>${esc(t.r)}</code><button class="btn alt sm" data-open="${t.id}" style="align-self:flex-start">Check this example</button></article>`;}).join('');
+  return `<article class="trick"><div class="tth">${renderSVG(s,{thumb:true})}</div><div><h3>${esc(t.t)}</h3><p>${esc(t.d)}</p><code>${esc(t.r)}</code><button class="linkbtn" data-open="${t.id}">Check this example</button></div></article>`;}).join('');
 $('#trickGrid').addEventListener('click',e=>{const b=e.target.closest('[data-open]'); if(!b) return; showTab('check'); loadDemo(b.dataset.open);});
 const LAB=[{label:'Store A',value:87},{label:'Store B',value:90},{label:'Store C',value:93},{label:'Store D',value:96}];
 function runLab(){
@@ -1201,8 +1203,8 @@ function runLab(){
   $('#labStartV').textContent=st+'%'; $('#labChart').innerHTML=renderSVG(s,{res});
   $('#labChart').style.transform=s.has_3d_effect?'rotateX(14deg) rotateY(-12deg)':'none';
   $('#kVis').textContent=fmt(g.visual,2)+'×'; $('#kData').textContent=fmt(g.data,2)+'×'; $('#kLf').textContent=fmt(lf,2)+'×';
-  const bad=lf>1.25; $('#kLf').style.color=bad?C.bad:C.ok; $('#kVis').style.color=bad?C.bad:'';
-  $('#labVerdict').innerHTML=`<span class="vlabel c-${res.verdict}"><i></i>${VLABEL[res.verdict]}</span><p style="font:700 17px/1.3 var(--d);margin-top:8px">${esc(headline(s,res))}</p>`;
+  const bad=lf>1.25; $('#kLf').style.color=bad?'#FF6A45':'#59D98E'; $('#kVis').style.color=bad?'#FF6A45':'';
+  $('#labVerdict').innerHTML=`<span class="vlabel" style="color:${VCOL[res.verdict]}"><i></i>${VLABEL[res.verdict]}</span><p style="font-weight:700;font-size:17px;line-height:1.3;margin-top:6px">${esc(headline(s,res))}</p>`;
   $('#labHonest').innerHTML=renderSVG(honestSpec(s,false),{mode:'honest'});
 }
 ['labStart','lab3d','labInv','labTicks'].forEach(id=>{$('#'+id).addEventListener('input',runLab);$('#'+id).addEventListener('change',runLab);});
@@ -1210,8 +1212,8 @@ $('#labReset').addEventListener('click',()=>{$('#labStart').value=0;['lab3d','la
 const COVERAGE={"source": "UKPLab/acl2026-misviz data/misviz/misviz.json (test split)", "n_test": 2077, "n_misleading": 1441, "n_clean": 636, "covered_strict": 630, "covered_with_misrep": 1230, "supported_chart_type": 1625, "misleaders": [{"name": "misrepresentation", "count": 678, "covered": "partial"}, {"name": "3d", "count": 294, "covered": "full"}, {"name": "truncated axis", "count": 179, "covered": "full"}, {"name": "inappropriate use of pie chart", "count": 129, "covered": "none"}, {"name": "inconsistent tick intervals", "count": 105, "covered": "full"}, {"name": "dual axis", "count": 62, "covered": "full"}, {"name": "inconsistent binning size", "count": 58, "covered": "none"}, {"name": "discretized continuous variable", "count": 40, "covered": "none"}, {"name": "inappropriate use of line chart", "count": 39, "covered": "none"}, {"name": "inappropriate item order", "count": 32, "covered": "none"}, {"name": "inverted axis", "count": 25, "covered": "full"}, {"name": "inappropriate axis range", "count": 23, "covered": "none"}]};
 {const c=COVERAGE, mx=Math.max(...c.misleaders.map(m=>m.count));
  $('#ebig').innerHTML=`<div><b>${Math.round(c.covered_strict/c.n_misleading*100)}%</b><span>of ${c.n_misleading.toLocaleString()} real misleading charts contain a trick ChartTruth fully checks</span></div><div><b>${Math.round(c.covered_with_misrep/c.n_misleading*100)}%</b><span>including partial pie-sum checks</span></div><div><b>${Math.round(c.supported_chart_type/c.n_test*100)}%</b><span>of all ${c.n_test.toLocaleString()} charts are bar, line or pie charts it can read</span></div>`;
- const L={full:'Checked',partial:'Partly',none:'Not yet'};
- $('#cov').innerHTML=c.misleaders.map(m=>`<div><span>${esc(m.name==='3d'?'3D':m.name[0].toUpperCase()+m.name.slice(1))}</span><i style="width:${m.count/mx*100}%;background:${m.covered==='full'?'var(--ok)':m.covered==='partial'?'var(--warn)':'rgba(255,255,255,.12)'};${m.covered!=='none'?'box-shadow:0 0 10px '+(m.covered==='full'?'var(--ok)':'var(--warn)'):''}"></i><span style="text-align:right;font-family:var(--mono)">${m.count}</span><em class="${m.covered}">${L[m.covered]}</em></div>`).join('');}
+ const L={full:'Checked',partial:'Partly',none:'Not covered'};
+ $('#cov').innerHTML=c.misleaders.map(m=>`<div><span>${esc(m.name==='3d'?'3D':m.name[0].toUpperCase()+m.name.slice(1))}</span><i style="width:${m.count/mx*100}%;background:${m.covered==='full'?'var(--ink)':m.covered==='partial'?'var(--sig)':'var(--hair)'}"></i><span style="text-align:right;font-family:var(--mono)">${m.count}</span><em class="${m.covered}">${L[m.covered]}</em></div>`).join('');}
 const SAMPLE={is_sample:true,note:'ILLUSTRATIVE PLACEHOLDER, not real results. Run eval_misviz.py to replace.',dataset:'UKPLab/misviz',split:'test',model:'gemini-3.5-flash',n_total:45,n_misleading:30,n_clean:15,
  methods:{zero_shot:{label:'Asking the AI directly',tp:24,fp:7,fn:6,tn:8,abstained:0},charttruth:{label:'ChartTruth',tp:21,fp:2,fn:9,tn:13,abstained:4}}};
 function met(m){const p=m.tp+m.fp?m.tp/(m.tp+m.fp):0,r=m.tp+m.fn?m.tp/(m.tp+m.fn):0;return{p:m.precision??p,r:m.recall??r,f:m.f1??(p+r?2*p*r/(p+r):0),fpr:m.fpr??(m.fp+m.tn?m.fp/(m.fp+m.tn):0)};}
