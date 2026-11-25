@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
-"""eval_misviz.py: benchmark ChartTruth on real-world charts from UKPLab/misviz.
+"""eval_misviz.py: benchmark ChartTruth on real-world charts from Misviz (UKPLab, ACL 2026).
 
-Compares, on the same stratified sample:
-  (A) Zero-shot Gemini: "Is this chart misleading?"
-  (B) ChartTruth hybrid: Gemini extracts strict JSON, then the deterministic rule
-      engine (a line-for-line port of audit() in index.html) decides.
+Compares, on the same stratified sample of real charts:
+  (A) Zero-shot: ask the model "is this chart misleading?"
+  (B) ChartTruth hybrid: the model only extracts strict JSON, then the deterministic
+      rule engine (a line-for-line port of audit() in index.html) decides.
+With --provider both, Gemini AND Claude each read every chart; if they disagree,
+the chart is sent to "human check" (refused), exactly like the web app's cross-check.
 
-Setup:  pip install datasets google-genai pillow
-        export HF_TOKEN=...  (accept the Misviz terms on huggingface.co first)
-        export GEMINI_API_KEY=...
-Run:    python eval_misviz.py --misleading 30 --clean 15 --out results.json
-Paste results.json into Tab 3 of index.html.
+Data, two ways:
+  --source hf      Hugging Face UKPLab/misviz (gated: accept the terms, set HF_TOKEN)
+  --source github  git clone https://github.com/UKPLab/acl2026-misviz  (no gating)
+                   then pass --misviz-json acl2026-misviz/data/misviz/misviz.json;
+                   images are downloaded from their original URLs (Wayback fallback).
+
+Setup:  pip install google-genai anthropic pillow datasets
+        export GEMINI_API_KEY=...   and/or   export ANTHROPIC_API_KEY=...
+Run:    python eval_misviz.py --source github --misviz-json acl2026-misviz/data/misviz/misviz.json \
+            --provider both --misleading 30 --clean 15 --out results.json
+Paste results.json into the Evidence section of index.html.
 """
-import argparse, datetime, io, json, os, random, re, time
-from datasets import load_dataset
-from google import genai
-from google.genai import types
+import argparse, base64, datetime, io, json, os, random, re, time, urllib.request
 
 EXTRACT_PROMPT = """You are a chart data-extraction engine. Look at the chart image and return ONLY a JSON object with exactly these keys:
 {"chart_type":"bar|line|pie|other","title":string,"domain":"general|science|finance|policy","y_axis_min":number|null,"y_axis_max":number|null,"y_ticks":number[],"is_inverted_y":boolean,"has_3d_effect":boolean,"has_dual_axis":boolean,"values_are_percent":boolean,"data":[{"label":string,"value":number}],"confidence":number,"notes":string}
@@ -37,7 +42,10 @@ ZERO_SHOT_PROMPT = """You are a data-visualization expert. Decide whether this c
 inappropriate chart type, inappropriate axis range, misrepresentation). Return ONLY JSON:
 {"misleading": boolean, "misleaders": string[], "confidence": number}"""
 
+DEFAULT_MODELS = {"gemini": "gemini-3.5-flash", "claude": "claude-sonnet-5-5"}
 
+
+# ---------------- rule engine (mirrors index.html) ----------------
 def num(v):
     try:
         f = float(v)
@@ -54,16 +62,12 @@ def normalize(r):
     conf = conf / 100 if 1 < conf <= 100 else conf
     vals = [d["value"] for d in data]
     pct = r.get("values_are_percent")
-    return {
-        "chart_type": r.get("chart_type") if r.get("chart_type") in ("bar", "line", "pie", "other") else "other",
-        "domain": r.get("domain") if r.get("domain") in ("general", "science", "finance", "policy") else "general",
-        "y_axis_min": num(r.get("y_axis_min")),
-        "y_ticks": [t for t in (num(x) for x in (r.get("y_ticks") or [])) if t is not None],
-        "is_inverted_y": bool(r.get("is_inverted_y")), "has_3d_effect": bool(r.get("has_3d_effect")),
-        "has_dual_axis": bool(r.get("has_dual_axis")),
-        "values_are_percent": pct if isinstance(pct, bool) else (bool(vals) and all(0 <= v <= 100 for v in vals)),
-        "data": data, "confidence": max(0.0, min(1.0, conf)),
-    }
+    return {"chart_type": r.get("chart_type") if r.get("chart_type") in ("bar", "line", "pie", "other") else "other",
+            "domain": r.get("domain") if r.get("domain") in ("general", "science", "finance", "policy") else "general",
+            "y_axis_min": num(r.get("y_axis_min")), "y_ticks": [t for t in (num(x) for x in (r.get("y_ticks") or [])) if t is not None],
+            "is_inverted_y": bool(r.get("is_inverted_y")), "has_3d_effect": bool(r.get("has_3d_effect")), "has_dual_axis": bool(r.get("has_dual_axis")),
+            "values_are_percent": pct if isinstance(pct, bool) else (bool(vals) and all(0 <= v <= 100 for v in vals)),
+            "data": data, "confidence": max(0.0, min(1.0, conf))}
 
 
 def lie_factor(vals, y_min):
@@ -76,7 +80,7 @@ def lie_factor(vals, y_min):
 
 
 def audit(s):
-    """Return (verdict, tags). verdict in honest|context|misleading|unverifiable. Mirrors index.html."""
+    """Return (verdict, tags); verdict in honest|context|misleading|unverifiable."""
     vals = [d["value"] for d in s["data"]]
     if s["chart_type"] == "other" or not vals or s["confidence"] < 0.6:
         return "unverifiable", []
@@ -91,8 +95,7 @@ def audit(s):
         if any(max(a, b) > 0 and abs(b - a) / max(a, b) > 0.05 for a, b in zip(g, g[1:])):
             flags.append(("inconsistent tick intervals", "high"))
     if t == "pie":
-        total = sum(vals)
-        if any(v < 0 for v in vals) or (s["values_are_percent"] and not 99 <= total <= 101):
+        if any(v < 0 for v in vals) or (s["values_are_percent"] and not 99 <= sum(vals) <= 101):
             flags.append(("misrepresentation", "high"))
     if s["is_inverted_y"] and t != "pie":
         flags.append(("inverted axis", "high"))
@@ -104,6 +107,29 @@ def audit(s):
     return ("misleading" if "high" in sev else "context" if "context" in sev else "honest"), [f[0] for f in flags]
 
 
+def cross_check(a, b):
+    """Merge two normalized readings like the web app: disagreement halves confidence (forces human check)."""
+    issues = []
+    if a["chart_type"] != b["chart_type"]:
+        issues.append("chart type")
+    if len(a["data"]) != len(b["data"]):
+        issues.append("number of values")
+    else:
+        for x, y in zip(a["data"], b["data"]):
+            if abs(x["value"] - y["value"]) > 0.05 * max(abs(x["value"]), abs(y["value"]), 1e-9):
+                issues.append("value " + x["label"]); break
+    ya, yb = a["y_axis_min"], b["y_axis_min"]
+    if (ya is None) != (yb is None) or (ya is not None and abs(ya - yb) > 0.02 * max(abs(ya), abs(yb), 1)):
+        issues.append("axis start")
+    for k in ("is_inverted_y", "has_3d_effect", "has_dual_axis"):
+        if a[k] != b[k]:
+            issues.append(k)
+    m = dict(a)
+    m["confidence"] = min(a["confidence"], b["confidence"]) * (0.5 if issues else 1)
+    return m, issues
+
+
+# ---------------- model calls ----------------
 def parse_json(text):
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", (text or "").strip())
     try:
@@ -113,25 +139,60 @@ def parse_json(text):
         return json.loads(m.group(0)) if m else None
 
 
-def ask(client, model, png, prompt, retries=4):
+def make_callers(providers, models):
+    calls = {}
+    if "gemini" in providers:
+        from google import genai
+        from google.genai import types
+        gc = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+        calls["gemini"] = lambda png, p: gc.models.generate_content(
+            model=models["gemini"], contents=[types.Part.from_bytes(data=png, mime_type="image/png"), p],
+            config=types.GenerateContentConfig(response_mime_type="application/json")).text
+    if "claude" in providers:
+        import anthropic
+        ac = anthropic.Anthropic()
+        calls["claude"] = lambda png, p: "".join(c.text for c in ac.messages.create(
+            model=models["claude"], max_tokens=2000, messages=[{"role": "user", "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": base64.b64encode(png).decode()}},
+                {"type": "text", "text": p + "\nReturn only the JSON object."}]}]).content if c.type == "text")
+    return calls
+
+
+def ask(call, png, prompt, retries=4):
     for attempt in range(retries):
         try:
-            r = client.models.generate_content(
-                model=model, contents=[types.Part.from_bytes(data=png, mime_type="image/png"), prompt],
-                config=types.GenerateContentConfig(response_mime_type="application/json"))
-            return parse_json(r.text)
+            return parse_json(call(png, prompt))
         except Exception as e:  # rate limits / transient errors: back off and retry
             print(f"    retry {attempt + 1}: {str(e)[:90]}")
             time.sleep(4 * 2 ** attempt)
     return None
 
 
+# ---------------- data ----------------
 def to_png(img, max_side=1536):
-    img = img.convert("RGB")
-    img.thumbnail((max_side, max_side))
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return buf.getvalue()
+    img = img.convert("RGB"); img.thumbnail((max_side, max_side))
+    buf = io.BytesIO(); img.save(buf, format="PNG"); return buf.getvalue()
+
+
+def load_items(a):
+    if a.source == "hf":
+        from datasets import load_dataset
+        ds = load_dataset("UKPLab/misviz", split=a.split, token=os.environ.get("HF_TOKEN"))
+        return [{"misleader": list(m), "get": (lambda i=i: ds[i]["image"])} for i, m in enumerate(ds["misleader"])]
+    from PIL import Image
+    rows = [e for e in json.load(open(a.misviz_json, encoding="utf-8")) if e["split"] == a.split]
+
+    def fetch(e):
+        for url in (e["image_url"], e.get("wayback_image_url")):
+            if not url:
+                continue
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 ChartTruth-eval"})
+                return Image.open(io.BytesIO(urllib.request.urlopen(req, timeout=30).read()))
+            except Exception:
+                continue
+        return None
+    return [{"misleader": e["misleader"], "get": (lambda e=e: fetch(e))} for e in rows]
 
 
 def metrics(rows, key, label):
@@ -145,44 +206,59 @@ def metrics(rows, key, label):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--source", choices=["hf", "github"], default="github")
+    ap.add_argument("--misviz-json", default="acl2026-misviz/data/misviz/misviz.json")
+    ap.add_argument("--provider", choices=["gemini", "claude", "both"], default="gemini")
+    ap.add_argument("--gemini-model", default=DEFAULT_MODELS["gemini"]); ap.add_argument("--claude-model", default=DEFAULT_MODELS["claude"])
     ap.add_argument("--misleading", type=int, default=30); ap.add_argument("--clean", type=int, default=15)
-    ap.add_argument("--split", default="test"); ap.add_argument("--model", default="gemini-3.5-flash")
-    ap.add_argument("--seed", type=int, default=42); ap.add_argument("--out", default="results.json")
+    ap.add_argument("--split", default="test"); ap.add_argument("--seed", type=int, default=42); ap.add_argument("--out", default="results.json")
     a = ap.parse_args()
 
-    ds = load_dataset("UKPLab/misviz", split=a.split, token=os.environ.get("HF_TOKEN"))
-    labels = ds["misleader"]  # list of misleader names per chart; empty list = clean chart
-    mis = [i for i, m in enumerate(labels) if m]; clean = [i for i, m in enumerate(labels) if not m]
+    providers = ["gemini", "claude"] if a.provider == "both" else [a.provider]
+    calls = make_callers(providers, {"gemini": a.gemini_model, "claude": a.claude_model})
+    items = load_items(a)
     rng = random.Random(a.seed)
-    idx = rng.sample(mis, min(a.misleading, len(mis))) + rng.sample(clean, min(a.clean, len(clean)))
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    mis = [i for i, it in enumerate(items) if it["misleader"]]; clean = [i for i, it in enumerate(items) if not it["misleader"]]
+    rng.shuffle(mis); rng.shuffle(clean)
+    queue = {True: mis, False: clean}; want = {True: a.misleading, False: a.clean}
 
     rows = []
-    for n, i in enumerate(idx, 1):
-        ex = ds[i]; png = to_png(ex["image"]); truth = bool(ex["misleader"])
-        zs = ask(client, a.model, png, ZERO_SHOT_PROMPT) or {}
-        verdict, tags = audit(normalize(ask(client, a.model, png, EXTRACT_PROMPT)))
-        rows.append({"index": i, "truth": truth, "gold": list(ex["misleader"]), "zero_shot": bool(zs.get("misleading")),
-                     "zero_shot_abstain": not zs, "charttruth": verdict == "misleading",
-                     "charttruth_abstain": verdict == "unverifiable", "verdict": verdict, "tags": tags})
-        print(f"[{n}/{len(idx)}] gold={'MIS' if truth else 'clean'} zero-shot={rows[-1]['zero_shot']} charttruth={verdict} {tags}")
+    for truth in (True, False):
+        got = 0
+        for i in queue[truth]:
+            if got >= want[truth]:
+                break
+            img = items[i]["get"]()
+            if img is None:
+                print(f"  skip #{i}: image unavailable"); continue
+            png = to_png(img); got += 1
+            zs = ask(calls[providers[0]], png, ZERO_SHOT_PROMPT) or {}
+            reads = [normalize(ask(calls[p], png, EXTRACT_PROMPT)) for p in providers]
+            spec, issues = cross_check(*reads) if len(reads) == 2 else (reads[0], [])
+            verdict, tags = audit(spec)
+            rows.append({"index": i, "truth": truth, "gold": list(items[i]["misleader"]), "zero_shot": bool(zs.get("misleading")),
+                         "zero_shot_abstain": not zs, "charttruth": verdict == "misleading", "charttruth_abstain": verdict == "unverifiable",
+                         "verdict": verdict, "tags": tags, "disagreements": issues})
+            print(f"[{len(rows)}] gold={'MIS' if truth else 'clean'} zero-shot={rows[-1]['zero_shot']} charttruth={verdict} {tags}"
+                  + (f" disagree={issues}" if issues else ""))
 
     per_type = {}
     for r in rows:
         for m in r["gold"]:
             d = per_type.setdefault(m, {"n": 0, "zero_shot_hit": 0, "charttruth_hit": 0})
             d["n"] += 1; d["zero_shot_hit"] += r["zero_shot"]; d["charttruth_hit"] += r["charttruth"]
-    out = {"is_sample": False, "dataset": "UKPLab/misviz", "split": a.split, "model": a.model, "seed": a.seed,
+    model = " + ".join(a.gemini_model if p == "gemini" else a.claude_model for p in providers)
+    out = {"is_sample": False, "dataset": "UKPLab/misviz", "source": a.source, "split": a.split, "model": model, "seed": a.seed,
            "n_total": len(rows), "n_misleading": sum(r["truth"] for r in rows), "n_clean": sum(not r["truth"] for r in rows),
            "generated": datetime.datetime.now().isoformat(timespec="seconds"),
-           "methods": {"zero_shot": metrics(rows, "zero_shot", "Zero-shot Gemini"),
-                       "charttruth": metrics(rows, "charttruth", "ChartTruth hybrid")},
+           "methods": {"zero_shot": metrics(rows, "zero_shot", f"Zero-shot ({providers[0]})"),
+                       "charttruth": metrics(rows, "charttruth", "ChartTruth hybrid" + (" (2-model cross-check)" if len(providers) == 2 else ""))},
            "recall_by_misleader": per_type, "rows": rows}
     with open(a.out, "w", encoding="utf-8") as f:
         json.dump(out, f, indent=2, ensure_ascii=False)
     for m in out["methods"].values():
-        print(f"{m['label']:<20} P={m['precision']:.3f} R={m['recall']:.3f} F1={m['f1']:.3f} FPR={m['fpr']:.3f} abstained={m['abstained']}")
-    print(f"Saved {a.out}. Paste it into Tab 3 of index.html.")
+        print(f"{m['label']:<40} P={m['precision']:.3f} R={m['recall']:.3f} F1={m['f1']:.3f} FPR={m['fpr']:.3f} refused={m['abstained']}")
+    print(f"Saved {a.out}. Paste it into the Evidence section of index.html.")
 
 
 if __name__ == "__main__":
