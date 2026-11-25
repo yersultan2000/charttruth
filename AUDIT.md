@@ -21,3 +21,11 @@ Method: automated Playwright sweep at 320, 414, 768, 1280 and 1920 px (horizonta
 - 0 horizontal overflow, 0 undersized targets, 0 console errors at all five widths
 - Every button and anchor works. End to end: upload, paste, drop, manual entry with validation, undo, share link round trip (and a damaged link), CSV and PNG downloads, provider switching, keyboard shortcuts, guided tour
 - The web rule engine and `eval_misviz.py` give identical verdicts on 15 test cases; the game's answer key matched on 1,800 generated charts
+
+## Round 2 (user feedback: "uncomfortable, not understandable"; wanted futuristic)
+- Restructured into three tabs (Check a chart, Spot the lie, Learn). The main page went from 8,400 px to about 2,100 px on desktop.
+- Check a chart is now a numbered 1-2-3 flow with a live step tracker: pick a chart, see what's wrong, share.
+- After an upload, one clear choice: "Let AI read it" or "Type the numbers myself". The disabled button explains why it's disabled.
+- Plain language throughout ("Exaggeration 2.88×" instead of a bare lie factor). The number editor is folded away and opens automatically only when ChartTruth needs you.
+- Futuristic dark visual: glowing glass panels, HUD-framed comparison viewer, scan animation while the AI reads. Reduced motion is respected.
+- Re-tested: 0 overflow and 0 console errors at 5 widths; every interaction passes end to end.
