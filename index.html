@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChartTruth — chart corrections desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a newspaper corrections desk — calm, exact, a little stern.
+   IDEA: the chart as a proof sheet; the original gets red-pen markup, the correction runs beside it.
+   PICTURE: before/after pair with hand-drawn annotations numbered to the findings.
+   COLOUR/TYPE: warm paper, ink, cobalt for actions; teal/amber/crimson only for verdicts. Newsreader + Instrument Sans + JetBrains Mono figures + Caveat for the pen.
+   LAYOUT: masthead, case strip, headline verdict with one huge figure, before/after, findings + data. */
+:root{color-scheme:light;--paper:#FBFAF7;--card:#FFFFFF;--ink:#16181D;--ink2:#3B3D42;--muted:#6E6C66;--rule:#DCD8CF;--rule2:#ECE9E2;
+--cobalt:#1D4ED8;--cobalt-bg:#EEF2FD;--teal:#0F766E;--teal-bg:#E9F5F2;--amber:#B45309;--amber-bg:#FBF2E4;--crimson:#B91C1C;--crimson-bg:#FBECEA;
+--serif:"Newsreader",Georgia,"Times New Roman",serif;--sans:"Instrument Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+--mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;--hand:"Caveat","Segoe Print","Bradley Hand",cursive}
+*{box-sizing:border-box;min-width:0}
+html{scroll-padding-top:80px}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 var(--sans);overflow-x:clip;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding:0 max(4vw,16px)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--cobalt);outline-offset:2px;border-radius:4px}
+
+/* masthead */
+.mast{border-bottom:3px double var(--ink);background:var(--paper);position:sticky;top:0;z-index:20}
+.mast .wrap{display:flex;align-items:flex-end;gap:24px;padding-top:16px;padding-bottom:10px;flex-wrap:wrap}
+.logo{display:flex;align-items:baseline;gap:12px;text-decoration:none;color:var(--ink)}
+.logo b{font:600 30px/1 var(--serif);letter-spacing:-.02em}
+.logo b i{font-style:italic;font-weight:400;color:var(--crimson)}
+.logo span{font-size:13px;color:var(--muted)}
+nav{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+nav button{border:0;background:none;padding:10px 12px;font-weight:500;font-size:15px;color:var(--ink2);cursor:pointer;border-bottom:2px solid transparent;min-height:44px}
+nav button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--ink)}
+nav button:hover{color:var(--ink)}
+main{padding:24px 0 72px}
+.tab{display:none}.tab.on{display:block}
+
+/* type */
+.kicker{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 10px}
+h1,h2{font-family:var(--serif);font-weight:600;letter-spacing:-.015em;text-wrap:balance;margin:0}
+h1{font-size:clamp(32px,4.4vw,52px);line-height:1.05}
+h2{font-size:26px;line-height:1.15}
+.dek{font-size:18px;line-height:1.5;color:var(--ink2);max-width:62ch;margin:14px 0 0}
+.lbl{font-size:13px;font-weight:600;color:var(--ink2)}
+.small{font-size:13px;color:var(--muted)}
+.mono{font-family:var(--mono)}
+code{font-family:var(--mono);font-size:13px;background:var(--rule2);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+
+/* case strip */
+.cases{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.case{display:flex;flex-direction:column;text-align:left;border:1px solid var(--rule);background:var(--card);border-radius:6px;padding:10px;cursor:pointer;transition:border-color .15s,transform .15s}
+.case:hover{border-color:#a9a499}
+.case[aria-pressed=true]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.case .th{aspect-ratio:16/10;background:var(--rule2);border-radius:3px;overflow:hidden;margin-bottom:8px;display:grid;place-items:center}
+.case .th svg{width:100%;height:100%}
+.case b{font-size:14.5px;font-weight:600;line-height:1.25}
+.case small{font-size:13px;color:var(--muted);line-height:1.35;margin-top:2px}
+.case.drop{border-style:dashed;border-color:#a9a499;background:transparent}
+.case.drop .th{background:transparent;border:1px dashed var(--rule);font:500 30px var(--serif);color:var(--muted)}
+.case.drop.over{border-color:var(--cobalt);background:var(--cobalt-bg)}
+.case.drop .th img{width:100%;height:100%;object-fit:cover}
+
+.gem{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;padding:10px 12px;border:1px solid var(--rule);border-radius:6px;background:var(--card)}
+.gem input[type=password],.gem input[list]{height:40px;border:1px solid var(--rule);border-radius:5px;padding:0 10px;font-size:16px;background:var(--paper)}
+.gem #apiKey{flex:1 1 220px}.gem #model{flex:0 1 190px}
+.btn{height:44px;padding:0 18px;border-radius:5px;border:1px solid var(--cobalt);background:var(--cobalt);color:#fff;font-weight:600;font-size:15px;cursor:pointer}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--cobalt)}
+.btn.sm{height:36px;padding:0 12px;font-size:14px}
+.chk{display:inline-flex;gap:7px;align-items:center;font-size:14px;color:var(--ink2);cursor:pointer;min-height:32px}
+.chk input{width:16px;height:16px;accent-color:var(--cobalt)}
+.status{font-size:14px;margin:8px 0 0;min-height:1.3em;color:var(--ink2)}
+.status.err{color:var(--crimson)}.status.ok{color:var(--teal)}
+
+/* verdict hero */
+.hero{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:40px;align-items:end;padding:36px 0 26px;border-bottom:1px solid var(--rule);margin-bottom:26px}
+.stamp{display:inline-block;font:700 13px/1 var(--mono);letter-spacing:.08em;padding:7px 10px 6px;border:2px solid currentColor;border-radius:3px;transform:rotate(-2deg);margin-bottom:16px}
+.s-misleading{color:var(--crimson)}.s-context{color:var(--amber)}.s-honest{color:var(--teal)}.s-unverifiable{color:var(--muted)}
+.fig-key{border-left:1px solid var(--rule);padding-left:28px}
+.fig-key .num{font:700 clamp(64px,8vw,104px)/.9 var(--mono);letter-spacing:-.04em}
+.fig-key .num.misleading{color:var(--crimson)}.fig-key .num.context{color:var(--amber)}.fig-key .num.honest{color:var(--teal)}.fig-key .num.unverifiable{color:var(--muted)}
+.fig-key .cap{font-size:15px;font-weight:600;margin-top:10px}
+.fig-key .sub{font-size:14px;color:var(--muted)}
+.ratio{margin-top:14px;display:grid;gap:6px;font-size:13px}
+.ratio div{display:grid;grid-template-columns:76px 1fr 54px;gap:8px;align-items:center}
+.ratio i{display:block;height:10px;border-radius:2px}
+.ratio span:last-child{font-family:var(--mono);text-align:right}
+
+/* before / after */
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.sheet{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:16px 16px 12px}
+.sheet header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.sheet header h3{font:600 15px var(--sans);margin:0}
+.sheet header .small{font-size:13px}
+.sheet .art{min-height:300px;display:grid;place-items:center}
+.sheet .art svg{width:100%;height:auto;display:block}
+.sheet .art img{max-width:100%;max-height:460px;border-radius:3px}
+.empty{color:var(--muted);font-size:15px;text-align:center;padding:30px 16px;max-width:36ch}
+.sheet.after{border-color:#BFD8D2}
+
+/* findings + data */
+.lower{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:40px;margin-top:36px}
+ol.find{list-style:none;padding:0;margin:14px 0 0;counter-reset:f}
+ol.find li{counter-increment:f;display:grid;grid-template-columns:30px 1fr;gap:10px;padding:12px 0;border-top:1px solid var(--rule2)}
+ol.find li::before{content:counter(f);width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 12px var(--mono);color:#fff;background:var(--crimson);margin-top:2px}
+ol.find li.context::before{background:var(--amber)}ol.find li.ok::before{background:var(--teal);content:"✓"}ol.find li.unv::before{background:var(--muted);content:"?"}
+.tagline{font:500 12px var(--mono);color:var(--muted);display:block;margin-bottom:2px}
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin-top:26px;border-top:1px solid var(--rule)}
+.steps div{padding:10px 12px 0 0;font-size:13px;color:var(--muted)}
+.steps b{display:block;color:var(--ink);font-weight:600;font-size:14px}
+.steps .done b::before{content:"● ";color:var(--teal)}.steps .wait b::before{content:"○ ";color:var(--muted)}.steps .err b::before{content:"● ";color:var(--crimson)}
+
+.fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+.fields label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--ink2)}
+.fields .w2{grid-column:span 2}
+.fields input,.fields select,td input{height:40px;border:1px solid var(--rule);border-radius:5px;padding:0 9px;font-size:16px;font-weight:400;background:var(--card);width:100%}
+.flags{display:flex;flex-wrap:wrap;gap:4px 18px;margin:12px 0 6px}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th{text-align:left;font-size:13px;font-weight:600;color:var(--muted);padding:6px 6px 6px 0;border-bottom:1px solid var(--ink)}
+td{padding:6px 6px 6px 0;border-bottom:1px solid var(--rule2)}
+td.n input{font-family:var(--mono);text-align:right}
+.x{width:36px;height:36px;border:0;background:none;color:var(--muted);font-size:20px;cursor:pointer;border-radius:4px}
+.x:hover{background:var(--rule2);color:var(--crimson)}
+details.raw{margin-top:14px}details.raw summary{cursor:pointer;font-size:14px;color:var(--ink2)}
+pre{background:#16181D;color:#E8E6E1;border-radius:6px;padding:14px;overflow:auto;font:12.5px/1.6 var(--mono);max-height:340px}
+
+/* lab */
+.labgrid{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.5fr) minmax(0,1fr);gap:24px;margin-top:26px}
+.ctrl{display:grid;gap:18px;align-content:start}
+.range label{display:flex;justify-content:space-between;font-weight:600;font-size:15px}
+.range output{font-family:var(--mono);color:var(--crimson)}
+input[type=range]{width:100%;accent-color:var(--crimson);height:32px}
+.toggles{display:grid;gap:4px}
+.big3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--ink);border-bottom:1px solid var(--rule)}
+.big3 div{padding:12px 4px}
+.big3 b{display:block;font:700 26px/1 var(--mono);letter-spacing:-.02em}
+.big3 small{font-size:12.5px;color:var(--muted)}
+.stage{perspective:1000px}
+.tilt{transition:transform .35s ease}
+@media (prefers-reduced-motion:reduce){.tilt,.case{transition:none}}
+
+/* evidence */
+.ev{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:36px;margin-top:26px}
+.note-band{border-left:3px solid var(--amber);background:var(--amber-bg);color:#7a3a07;padding:10px 14px;font-size:14px;border-radius:0 4px 4px 0;margin-bottom:16px}
+.note-band.real{border-color:var(--teal);background:var(--teal-bg);color:#0b4f49}
+.mt td,.mt th{text-align:right;font-variant-numeric:tabular-nums}
+.mt td:first-child,.mt th:first-child{text-align:left}
+.mt td{font-family:var(--mono);font-size:15px;padding:10px 6px 10px 0}
+.mt td:first-child{font-family:var(--sans);font-weight:600}
+.cms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:22px}
+.cm{display:grid;grid-template-columns:auto 1fr 1fr;gap:3px;font-size:12.5px;margin-top:8px}
+.cm span{padding:8px 4px;text-align:center;color:var(--muted)}
+.cm b{padding:12px 4px;text-align:center;font:700 22px var(--mono);border-radius:3px}
+.cm .good{background:var(--teal-bg);color:var(--teal)}.cm .bad{background:var(--crimson-bg);color:var(--crimson)}
+textarea{width:100%;min-height:150px;border:1px solid var(--rule);border-radius:5px;padding:10px;font:12.5px/1.5 var(--mono);background:var(--card)}
+.standards{columns:2 320px;column-gap:40px;margin-top:18px}
+.standards div{break-inside:avoid;margin:0 0 18px}
+.standards h3{font:600 17px/1.3 var(--serif);margin:0 0 4px}
+.standards p{margin:0;color:var(--ink2);font-size:15px}
+footer{border-top:1px solid var(--rule);color:var(--muted);font-size:13px;padding:18px 0 28px}
+
+@media(max-width:980px){.cases{grid-template-columns:repeat(3,minmax(0,1fr))}.labgrid{grid-template-columns:1fr 1fr}.labgrid .ctrl{grid-column:span 2}}
+@media(max-width:760px){.mast{position:static}.hero,.lower,.ev{grid-template-columns:1fr;gap:24px}.fig-key{border-left:0;padding-left:0;border-top:1px solid var(--rule);padding-top:18px}
+ .pair{grid-template-columns:1fr}.cases{grid-template-columns:repeat(2,minmax(0,1fr))}.fields{grid-template-columns:1fr 1fr}
+ .steps{grid-template-columns:1fr 1fr}.labgrid{grid-template-columns:1fr}.labgrid .ctrl{grid-column:auto}.cms{grid-template-columns:1fr}.logo span{display:none}nav{margin-left:0}}
+</style>
+</head>
+<body>
+<header class="mast">
+  <div class="wrap">
+    <a class="logo" href="#" aria-label="ChartTruth home"><b>Chart<i>Truth</i></b><span>A corrections desk for charts</span></a>
+    <nav role="tablist" aria-label="Sections">
+      <button role="tab" aria-selected="true" data-tab="audit">Audit a chart</button>
+      <button role="tab" aria-selected="false" data-tab="lab">Deception lab</button>
+      <button role="tab" aria-selected="false" data-tab="bench">Evidence &amp; standards</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+<!-- ============ AUDIT ============ -->
+<section class="tab on" id="tab-audit" role="tabpanel">
+  <p class="kicker">Choose a case file, or drop in your own chart</p>
+  <div class="cases" id="cases"></div>
+  <div class="gem">
+    <span class="lbl">Read your chart with Gemini</span>
+    <input type="password" id="apiKey" placeholder="Google AI Studio key (optional)" autocomplete="off" aria-label="Gemini API key">
+    <input id="model" list="models" value="gemini-3.5-flash" aria-label="Gemini model">
+    <datalist id="models"><option value="gemini-3.5-flash"><option value="gemini-3.1-flash-lite"></datalist>
+    <button class="btn" id="analyze" disabled>Read chart</button>
+    <label class="chk"><input type="checkbox" id="remember"> Keep for this tab</label>
+  </div>
+  <p class="status" id="status" role="status"></p>
+
+  <div class="hero" id="hero"></div>
+
+  <div class="pair">
+    <article class="sheet">
+      <header><h3>As published</h3><span class="small" id="origTag">—</span></header>
+      <div class="art" id="origPane"></div>
+    </article>
+    <article class="sheet after">
+      <header><h3>Corrected by ChartTruth</h3><span class="small" id="honestTag">—</span></header>
+      <div class="art" id="honestPane"></div>
+      <label class="chk" id="zeroWrap" style="display:none"><input type="checkbox" id="lineZero"> Draw the line from zero</label>
+    </article>
+  </div>
+
+  <div class="lower">
+    <div>
+      <h2>Findings</h2>
+      <p class="small">Numbers match the red-pen marks on the original. Tags follow the Misviz misleader taxonomy.</p>
+      <ol class="find" id="findings"></ol>
+      <div class="steps" id="pipe"></div>
+    </div>
+    <div>
+      <h2>The numbers we read</h2>
+      <p class="small">The AI only transcribes. Check every value; any edit re-runs the math engine at once.</p>
+      <div id="editor"></div>
+      <details class="raw"><summary>Raw extraction JSON</summary><pre id="raw"></pre></details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LAB ============ -->
+<section class="tab" id="tab-lab" role="tabpanel">
+  <p class="kicker">Deception lab</p>
+  <h1>Same four numbers. Watch them lie.</h1>
+  <p class="dek">Four stores scored 87, 90, 93 and 96 out of 100. Change only the design and see how far the picture drifts from the data, and how the engine catches each trick.</p>
+  <div class="labgrid">
+    <div class="ctrl">
+      <div class="range"><label for="labStart">Y-axis starts at <output id="labStartV">0%</output></label><input type="range" id="labStart" min="0" max="86" value="0"></div>
+      <div class="toggles">
+        <label class="chk"><input type="checkbox" id="lab3d"> Add 3D perspective</label>
+        <label class="chk"><input type="checkbox" id="labInv"> Flip the y-axis</label>
+        <label class="chk"><input type="checkbox" id="labTicks"> Space the ticks unevenly</label>
+      </div>
+      <div class="big3">
+        <div><b id="kVis">—</b><small>Store D looks</small></div>
+        <div><b id="kData">—</b><small>Store D really is</small></div>
+        <div><b id="kLf">—</b><small>Lie factor</small></div>
+      </div>
+      <p class="small" style="margin:0">Lie factor = looks ÷ really. Above 1.25 is flagged as misleading.</p>
+      <button class="btn ghost sm" id="labReset" style="justify-self:start">Reset to honest</button>
+    </div>
+    <article class="sheet">
+      <header><h3>What the reader sees</h3><span class="small">with the engine's red pen</span></header>
+      <div class="art stage"><div id="labChart" class="tilt" style="width:100%"></div></div>
+    </article>
+    <article class="sheet after">
+      <header><h3>Verdict</h3></header>
+      <div id="labVerdict"></div>
+      <div id="labHonest" style="margin-top:10px"></div>
+    </article>
+  </div>
+</section>
+
+<!-- ============ EVIDENCE ============ -->
+<section class="tab" id="tab-bench" role="tabpanel">
+  <p class="kicker">Evidence</p>
+  <h1>Does “read, then reason” beat asking the AI directly?</h1>
+  <p class="dek"><code>eval_misviz.py</code> runs both methods on the same real-world charts from Misviz (UKPLab, 2025): zero-shot Gemini (“is this misleading?”) against ChartTruth (Gemini reads, the rule engine judges).</p>
+  <div class="ev">
+    <div id="benchOut"></div>
+    <div>
+      <h2>Run it yourself</h2>
+      <pre>pip install datasets google-genai pillow
+export HF_TOKEN=...       # accept Misviz terms first
+export GEMINI_API_KEY=...
+python eval_misviz.py --misleading 30 --clean 15 \
+  --model gemini-3.5-flash --out results.json</pre>
+      <p class="small">Paste <code>results.json</code> here:</p>
+      <textarea id="benchJson" spellcheck="false" aria-label="Benchmark results JSON"></textarea>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;align-items:center"><button class="btn" id="benchRender">Show results</button><button class="btn ghost" id="benchSample">Sample layout</button><span class="status" id="benchStatus" style="margin:0"></span></div>
+    </div>
+  </div>
+  <h2 style="margin-top:44px">Standards</h2>
+  <div class="standards">
+    <div><h3>The AI reads; the math judges.</h3><p>The language model only transcribes numbers and visual cues. Every verdict comes from published, deterministic rules that anyone can check by hand.</p></div>
+    <div><h3>It refuses to guess.</h3><p>Below 60% extraction confidence, or for an unsupported chart type, ChartTruth says “unable to verify” rather than inventing an answer.</p></div>
+    <div><h3>It avoids false accusations.</h3><p>A zoomed axis on a line chart is often legitimate. Science and finance line charts get a neutral context label, not a misleading flag.</p></div>
+    <div><h3>“Misleading” describes the design, not the author.</h3><p>A flag means the visual encoding distorts the numbers. It never claims anyone meant to deceive.</p></div>
+    <div><h3>People stay in control.</h3><p>Every extracted value is editable, and a person can mark the data as verified.</p></div>
+    <div><h3>Nothing leaves your device by default.</h3><p>No backend, no tracking. An image goes to Google’s API only when you add your own key, and the key is never stored beyond this tab.</p></div>
+    <div><h3>What it can’t see.</h3><p>One data series at a time. It doesn’t catch cherry-picked date ranges, misleading captions, missing context or bad source data, and vision models can misread small text. Misviz is mostly English-language web charts.</p></div>
+    <div><h3>About the lie factor.</h3><p>ChartTruth uses the ratio form of Edward Tufte’s idea: how many times bigger the largest bar looks than the smallest, divided by how many times bigger it really is.</p></div>
+  </div>
+</section>
+</main>
+<footer><div class="wrap">ChartTruth · zero-backend and open source · WAICY 2026 High School AI Showcase · demo charts use illustrative numbers</div></footer>
+
+<script>
+{
+/*ENGINE-START*/
+// ================= ChartTruth deterministic engine (mirrored in eval_misviz.py) =================
+const EXTRACT_PROMPT = `You are a chart data-extraction engine. Look at the chart image and return ONLY a JSON object with exactly these keys:
+{"chart_type":"bar|line|pie|other","title":string,"domain":"general|science|finance|policy","y_axis_min":number|null,"y_axis_max":number|null,"y_ticks":number[],"is_inverted_y":boolean,"has_3d_effect":boolean,"has_dual_axis":boolean,"values_are_percent":boolean,"data":[{"label":string,"value":number}],"confidence":number,"notes":string}
+Rules:
+- Transcribe what is DRAWN. Do not judge whether the chart is misleading.
+- y_axis_min / y_axis_max: lowest and highest values printed on the value axis (null for pie charts or if unreadable).
+- y_ticks: every printed value-axis tick label as a plain number (strip %, $, units), listed from the bottom of the image to the top.
+- is_inverted_y: true only if values increase downward.
+- has_3d_effect: true if bars or slices are drawn with depth or perspective.
+- has_dual_axis: true if there are two different value axes.
+- data: one entry per bar, point or slice. Use printed labels where available, otherwise estimate from the axis. For multi-series charts use the first series and say so in notes.
+- values_are_percent: true if the values are percentages.
+- domain: science (climate, medicine, physics, biology), finance (stocks, prices, GDP, markets), policy (government, elections, crime, public programs), otherwise general.
+- confidence: 0-1, your confidence that the numbers are accurate.
+- chart_type "other" for anything that is not a bar, line or pie chart.`;
+
+function num(v){ if(v===null||v===undefined||v==='') return null; const n=Number(v); return Number.isFinite(n)?n:null; }
+function fmt(n,d=2){ if(n===Infinity) return '∞'; if(n===null||n===undefined||!Number.isFinite(n)) return '—'; const p=10**d; return String(Math.round(n*p)/p); }
+
+function normalizeSpec(r){
+  r=r||{};
+  const types=['bar','line','pie','other'], doms=['general','science','finance','policy'];
+  const data=(Array.isArray(r.data)?r.data:[]).map(d=>({label:String((d&&d.label)??''),value:num(d&&d.value)})).filter(d=>d.value!==null);
+  let conf=num(r.confidence); if(conf===null) conf=0; if(conf>1&&conf<=100) conf/=100;
+  const vals=data.map(d=>d.value);
+  const pctDefault=vals.length>0&&vals.every(v=>v>=0&&v<=100);
+  return {
+    chart_type:types.includes(r.chart_type)?r.chart_type:'other',
+    title:String(r.title||'Untitled chart'),
+    domain:doms.includes(r.domain)?r.domain:'general',
+    y_axis_min:num(r.y_axis_min), y_axis_max:num(r.y_axis_max),
+    y_ticks:(Array.isArray(r.y_ticks)?r.y_ticks:[]).map(num).filter(v=>v!==null),
+    is_inverted_y:!!r.is_inverted_y, has_3d_effect:!!r.has_3d_effect, has_dual_axis:!!r.has_dual_axis,
+    values_are_percent:typeof r.values_are_percent==='boolean'?r.values_are_percent:pctDefault,
+    data, confidence:Math.max(0,Math.min(1,conf)), notes:String(r.notes||''),
+    unit:String(r.unit||''), human_verified:!!r.human_verified
+  };
+}
+
+// Ratio Lie Factor: how many times bigger the largest bar LOOKS vs the smallest, divided by how many times bigger it IS.
+function lieFactorParts(vals,yMin){
+  const max=Math.max(...vals), min=Math.min(...vals);
+  if(!(yMin>0)||min<=0) return {visual:max/min,data:max/min,lf:1};
+  if(min<=yMin) return {visual:Infinity,data:max/min,lf:Infinity};
+  const visual=(max-yMin)/(min-yMin), data=max/min;
+  return {visual,data,lf:visual/data};
+}
+
+function audit(s){
+  const pts=s.data.filter(d=>Number.isFinite(d.value)); const vals=pts.map(d=>d.value);
+  const res={verdict:'honest',flags:[],lieFactor:null,visualRatio:null,dataRatio:null,guardrail:false,reason:''};
+  const conf=s.human_verified?1:(s.confidence??0);
+  if(s.chart_type==='other'){res.verdict='unverifiable';res.reason='Only bar, line and pie charts are supported.';return res;}
+  if(vals.length<1){res.verdict='unverifiable';res.reason='No data points were extracted.';return res;}
+  if(conf<0.6){res.verdict='unverifiable';res.reason=`Extraction confidence is ${Math.round(conf*100)}%, below the 60% threshold. Check the values below and tick "Human-verified" to audit anyway.`;return res;}
+  const add=(tag,sev,text)=>res.flags.push({tag,sev,text});
+  const allPos=vals.every(v=>v>0), yMin=s.y_axis_min, u=s.unit||'';
+
+  if(s.chart_type==='bar'&&vals.length>=2&&allPos){
+    const p=lieFactorParts(vals,yMin); res.lieFactor=p.lf; res.visualRatio=p.visual; res.dataRatio=p.data;
+    if(yMin!==null&&yMin>0){
+      if(p.lf===Infinity) add('truncated axis','high',`The y-axis starts at ${fmt(yMin)}${u}, above the smallest value, so at least one bar is visually wiped out.`);
+      else if(p.lf>1.25) add('truncated axis','high',`The y-axis starts at ${fmt(yMin)}${u} instead of 0. The tallest bar looks ${fmt(p.visual,1)}× the shortest, but the real ratio is only ${fmt(p.data,2)}× (Lie Factor ${fmt(p.lf)}).`);
+      else add('truncated axis','context',`The y-axis starts at ${fmt(yMin)}${u}, but the distortion is small (Lie Factor ${fmt(p.lf)} ≤ 1.25).`);
+    }
+  }
+  if(s.chart_type==='line'&&yMin!==null&&yMin>0&&allPos){
+    if(s.domain==='science'||s.domain==='finance'){
+      res.guardrail=true;
+      add('context-dependent zoom','context',`The y-axis starts at ${fmt(yMin)}${u}. In ${s.domain} line charts, zooming in is standard practice for showing small but real changes, so the guardrail does not call it misleading.`);
+    } else add('zoomed line axis','context',`The y-axis starts at ${fmt(yMin)}${u}. Line charts don't need a zero baseline, but zooming makes changes look bigger, so check the real size of the change.`);
+  }
+  if(s.chart_type!=='pie'&&s.y_ticks.length>=3){
+    const t=s.y_ticks, gaps=[]; for(let i=1;i<t.length;i++) gaps.push(Math.abs(t[i]-t[i-1]));
+    let bad=false; for(let i=1;i<gaps.length;i++){const m=Math.max(gaps[i],gaps[i-1]); if(m>0&&Math.abs(gaps[i]-gaps[i-1])/m>0.05) bad=true;}
+    if(bad) add('inconsistent tick intervals','high',`The tick marks are evenly spaced, but the steps between their values are uneven (${gaps.map(g=>fmt(g)).join(', ')}). That stretches part of the scale.`);
+  }
+  if(s.chart_type==='pie'){
+    const sum=vals.reduce((a,b)=>a+b,0);
+    if(vals.some(v=>v<0)) add('misrepresentation','high','The pie contains negative values, which cannot be parts of a whole.');
+    if(s.values_are_percent&&(sum<99||sum>101)) add('misrepresentation','high',`The slices add up to ${fmt(sum,1)}%, not 100%. Slices must be parts of one whole, so the honest version rescales them.`);
+  }
+  if(s.is_inverted_y&&s.chart_type!=='pie') add('inverted axis','high','The vertical scale is upside down (bigger values sit lower), so a rise looks like a fall.');
+  if(s.has_dual_axis) add('dual axis','high','Two different y-scales share one plot, so where the lines cross or line up is arbitrary.');
+  if(s.has_3d_effect) add('3D','high',s.chart_type==='pie'?'3D perspective makes front slices look bigger and back slices smaller, so area no longer matches value.':'3D depth and perspective distort how tall the bars look.');
+
+  if(res.flags.some(f=>f.sev==='high')) res.verdict='misleading';
+  else if(res.flags.some(f=>f.sev==='context')) res.verdict='context';
+  return res;
+}
+/*ENGINE-END*/
+
+// ================= helpers =================
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const C={cobalt:'#1D4ED8',teal:'#0F766E',amber:'#B45309',crimson:'#B91C1C',ink:'#16181D',muted:'#6E6C66'};
+const HONEST_PAL=['#1D4ED8','#0F766E','#B45309','#6E6C66','#5B3FA8','#0E7490'];
+const NEWS_PAL=['#E8590C','#1971C2','#2F9E44','#F08C00','#7048E8','#C2255C'];
+const shade=(hex,f)=>{const n=parseInt(hex.slice(1),16);return '#'+[n>>16,(n>>8)&255,n&255].map(c=>Math.max(0,Math.min(255,Math.round(c*f))).toString(16).padStart(2,'0')).join('');};
+const clip=(t,n)=>{t=String(t);return t.length>n?t.slice(0,n-1)+'…':t;};
+
+function niceTicks(lo,hi){
+  if(lo===hi) hi=lo+1;
+  const raw=(hi-lo)/5, mag=10**Math.floor(Math.log10(raw)), step=[1,2,2.5,5,10].map(m=>m*mag).find(x=>x>=raw);
+  const a=Math.floor(lo/step)*step, b=Math.ceil(hi/step)*step, out=[];
+  for(let v=a;v<=b+step/2;v+=step) out.push(Math.round(v*1e6)/1e6);
+  return out;
+}
+function honestSpec(s,lineZero){
+  const pts=s.data.filter(d=>Number.isFinite(d.value)), vals=pts.map(d=>d.value);
+  const h={...s,is_inverted_y:false,has_3d_effect:false,has_dual_axis:false,data:pts.map(d=>({...d}))};
+  if(s.chart_type==='pie'){const pos=vals.map(v=>Math.max(0,v)),sum=pos.reduce((a,b)=>a+b,0)||1;
+    h.data=pts.map((d,i)=>({label:d.label,value:+(pos[i]/sum*100).toFixed(1)}));h.values_are_percent=true;h.unit='%';}
+  else {const zero=s.chart_type==='bar'||lineZero;
+    h.y_ticks=niceTicks(zero?Math.min(0,...vals):Math.min(...vals),zero?Math.max(0,...vals):Math.max(...vals));
+    h.y_axis_min=h.y_ticks[0];h.y_axis_max=h.y_ticks[h.y_ticks.length-1];}
+  return h;
+}
+
+// ================= chart renderer (published look, honest look, thumbnails, red-pen notes) =================
+function renderSVG(s,o={}){
+  const honest=o.mode==='honest', thumb=!!o.thumb;
+  const flags=(!honest&&!thumb&&o.res)?o.res.flags:[];
+  const W=560,L=thumb?20:64,R=thumb?16:24,T=thumb?16:(honest?24:58),PH=thumb?300:250,B=thumb?16:46+(flags.length?flags.length*28+8:0);
+  const H=T+PH+B,pw=W-L-R,ph=PH;
+  const F=honest?'font-family="Instrument Sans,system-ui,sans-serif"':'font-family="Arial,Helvetica,sans-serif"';
+  const MONO='font-family="JetBrains Mono,ui-monospace,monospace"', HAND='font-family="Caveat,Segoe Print,cursive"';
+  const pts=s.data.filter(d=>Number.isFinite(d.value)), vals=pts.map(d=>d.value), u=s.unit||'';
+  let o2=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(s.title)}">`;
+  if(!honest) o2+=`<rect width="${W}" height="${H}" fill="#F6F5F0"/>`;
+  if(!thumb&&!honest) o2+=`<text x="${W/2}" y="32" text-anchor="middle" ${F} font-size="18" font-weight="700" fill="#111">${esc(clip(s.title,52))}</text>`;
+  if(!pts.length) return o2+'</svg>';
+  const notes=[];
+  const addNote=(sev,text)=>{notes.push({sev,text});return notes.length;};
+  const mark=(x,y,n,sev)=>`<circle cx="${x}" cy="${y}" r="10" fill="${sev==='high'?C.crimson:C.amber}"/><text x="${x}" y="${y+4}" text-anchor="middle" ${MONO} font-size="11" font-weight="700" fill="#fff">${n}</text>`;
+  const pen=sev=>sev==='high'?C.crimson:C.amber;
+  let body='';
+  if(s.chart_type==='pie'){
+    const cx=thumb?W/2:190,cy=T+ph/2,r=thumb?135:112,k=s.has_3d_effect?0.5:1,depth=s.has_3d_effect?(thumb?34:28):0;
+    const PAL=honest?HONEST_PAL:NEWS_PAL, pv=vals.map(v=>Math.max(0,v)), tot=pv.reduce((a,b)=>a+b,0)||1;
+    const P=(a,dy=0)=>`${(cx+r*Math.cos(a)).toFixed(2)},${(cy+r*k*Math.sin(a)+dy).toFixed(2)}`;
+    let a=s.has_3d_effect?0.25:-Math.PI/2;
+    const sl=pv.map((v,i)=>{const a0=a;a+=v/tot*2*Math.PI;return{a0,a1:a,col:PAL[i%PAL.length],d:pts[i]};});
+    if(depth) sl.forEach(q=>[[0,Math.PI],[2*Math.PI,3*Math.PI]].forEach(([f0,f1])=>{const s0=Math.max(q.a0,f0),s1=Math.min(q.a1,f1);
+      if(s1>s0) body+=`<path d="M${P(s0)} A${r},${r*k} 0 0 1 ${P(s1)} L${P(s1,depth)} A${r},${r*k} 0 0 0 ${P(s0,depth)} Z" fill="${shade(q.col,.68)}"/>`;}));
+    sl.forEach((q,i)=>{const lg=(q.a1-q.a0)>Math.PI?1:0, full=(q.a1-q.a0)>=2*Math.PI-1e-6;
+      body+=full?`<ellipse cx="${cx}" cy="${cy}" rx="${r}" ry="${r*k}" fill="${q.col}"/>`:`<path d="M${cx},${cy} L${P(q.a0)} A${r},${r*k} 0 ${lg} 1 ${P(q.a1)} Z" fill="${q.col}" stroke="${honest?'#fff':'#F6F5F0'}" stroke-width="2"/>`;
+      if(thumb) return;
+      const m=(q.a0+q.a1)/2;
+      if(q.a1-q.a0>0.3) body+=`<text x="${cx+r*.62*Math.cos(m)}" y="${cy+r*k*.62*Math.sin(m)+5}" text-anchor="middle" ${honest?MONO:F} font-size="14" font-weight="700" fill="#fff">${esc(fmt(q.d.value,1))}${s.values_are_percent?'%':''}</text>`;
+      body+=`<rect x="352" y="${T+40+i*28}" width="14" height="14" rx="2" fill="${q.col}"/><text x="374" y="${T+52+i*28}" ${F} font-size="14" fill="#222">${esc(clip(q.d.label,18))}${honest?` <tspan ${MONO} fill="#6E6C66">${esc(fmt(q.d.value,1))}%</tspan>`:''}</text>`;});
+    flags.forEach(f=>{const n=addNote(f.sev,f.tag==='misrepresentation'?`${vals.map(v=>fmt(v,1)).join(' + ')} = ${fmt(vals.reduce((a,b)=>a+b,0),1)}%, not 100%`:f.tag==='3D'?'3D tilt inflates the front slice':f.text.split('.')[0]);
+      if(f.tag==='misrepresentation') body+=mark(cx+r+6,cy-r*k-4,n,f.sev);
+      if(f.tag==='3D') body+=mark(cx,cy+r*k+depth+14,n,f.sev);});
+  } else {
+    let ticks=s.y_ticks.length>=2?[...s.y_ticks].sort((a,b)=>a-b):niceTicks(s.y_axis_min??Math.min(0,...vals),s.y_axis_max??Math.max(...vals));
+    const n=ticks.length;
+    const frac=v=>{let i=0;if(v>=ticks[n-1])i=n-2;else while(i<n-2&&v>ticks[i+1])i++;
+      return Math.max(-0.01,Math.min(1.04,(i+(v-ticks[i])/(ticks[i+1]-ticks[i]))/(n-1)));};
+    const yP=v=>s.is_inverted_y?T+frac(v)*ph:T+ph-frac(v)*ph;
+    const tickY=i=>s.is_inverted_y?T+ph*i/(n-1):T+ph-ph*i/(n-1);
+    ticks.forEach((t,i)=>{const y=tickY(i);
+      body+=`<line x1="${L}" x2="${L+pw}" y1="${y}" y2="${y}" stroke="${honest?'#ECE9E2':'#DEDDD6'}"/>`;
+      if(!thumb) body+=`<text x="${L-9}" y="${y+4}" text-anchor="end" ${honest?MONO:F} font-size="${honest?11.5:12}" fill="#5c5b57">${esc(fmt(t,2))}${esc(u)}</text>`;});
+    const zeroV=(ticks[0]<=0&&ticks[n-1]>=0)?0:ticks[0], base=yP(zeroV), band=pw/pts.length;
+    if(s.chart_type==='bar'){
+      const bw=band*(thumb?0.6:0.56),dx=s.has_3d_effect?13:0,dy=s.has_3d_effect?-9:0;
+      pts.forEach((d,i)=>{const col=honest?C.cobalt:NEWS_PAL[i%NEWS_PAL.length],x=L+i*band+(band-bw)/2,y=yP(d.value),top=Math.min(y,base),h=Math.abs(base-y);
+        if(dx){body+=`<polygon points="${x+bw},${top} ${x+bw+dx},${top+dy} ${x+bw+dx},${top+h+dy} ${x+bw},${top+h}" fill="${shade(col,.7)}"/><polygon points="${x},${top} ${x+dx},${top+dy} ${x+bw+dx},${top+dy} ${x+bw},${top}" fill="${shade(col,1.25)}"/>`;}
+        body+=`<rect x="${x}" y="${top}" width="${bw}" height="${Math.max(h,0.5)}" fill="${col}"/>`;
+        if(thumb) return;
+        const ly=s.is_inverted_y?top+h+17:top-8+dy;
+        body+=`<text x="${x+bw/2}" y="${ly}" text-anchor="middle" ${honest?MONO:F} font-size="13" font-weight="700" fill="#222">${esc(fmt(d.value,2))}${esc(u)}</text>`;
+        body+=`<text x="${x+bw/2}" y="${T+ph+22}" text-anchor="middle" ${F} font-size="12.5" fill="#333">${esc(clip(d.label,16))}</text>`;});
+    } else {
+      const col=honest?C.cobalt:(s.is_inverted_y?'#8f1d1d':'#1971C2');
+      const xy=pts.map((d,i)=>[L+band*(i+.5),yP(d.value)]);
+      const area=honest?(o.lineZero?.10:0):(s.is_inverted_y?.85:.13);
+      if(area) body+=`<polygon points="${xy[0][0]},${base} ${xy.map(p=>p.join(',')).join(' ')} ${xy[xy.length-1][0]},${base}" fill="${s.is_inverted_y&&!honest?'#c92a2a':col}" fill-opacity="${area}"/>`;
+      body+=`<polyline points="${xy.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${col}" stroke-width="${thumb?5:2.5}" stroke-linejoin="round"/>`;
+      if(!thumb) xy.forEach((p,i)=>{body+=`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#fff" stroke="${col}" stroke-width="2"/>`;
+        if(pts.length<=10||i%2===0) body+=`<text x="${p[0]}" y="${T+ph+22}" text-anchor="middle" ${F} font-size="12" fill="#333">${esc(clip(pts[i].label,10))}</text>`;});
+    }
+    if(honest&&!thumb) body+=`<line x1="${L}" x2="${L+pw}" y1="${base}" y2="${base}" stroke="#16181D" stroke-width="1.5"/>`;
+    else if(!thumb) body+=`<line x1="${L}" x2="${L}" y1="${T}" y2="${T+ph}" stroke="#9a9890"/>`;
+    // red pen
+    flags.forEach(f=>{
+      if(f.tag==='truncated axis'||f.tag==='context-dependent zoom'||f.tag==='zoomed line axis'){
+        const y0=tickY(0), n2=addNote(f.sev,f.tag==='truncated axis'?(f.sev==='high'?`Axis starts at ${fmt(s.y_axis_min)}${u}, not zero`:'Axis cut, but only a small distortion'):f.tag==='context-dependent zoom'?`Zoomed to ${fmt(s.y_axis_min)}${u}: normal for ${s.domain}`:`Zoomed to ${fmt(s.y_axis_min)}${u}: check the real change`);
+        body+=`<ellipse cx="${L-28}" cy="${y0}" rx="31" ry="14" fill="none" stroke="${pen(f.sev)}" stroke-width="2.2" transform="rotate(-6 ${L-28} ${y0})"/>`+mark(L+14,y0+(s.is_inverted_y?16:-16),n2,f.sev);
+      } else if(f.tag==='inverted axis'){
+        const n2=addNote(f.sev,'Axis flipped: bigger numbers sit lower');
+        body+=`<path d="M${L-52},${T+12} L${L-52},${T+ph-12}" stroke="${C.crimson}" stroke-width="2.4" fill="none"/><path d="M${L-59},${T+ph-24} L${L-52},${T+ph-10} L${L-45},${T+ph-24}" stroke="${C.crimson}" stroke-width="2.4" fill="none"/>`+mark(L-52,T+ph/2,n2,f.sev);
+      } else if(f.tag==='inconsistent tick intervals'){
+        const n2=addNote(f.sev,'Evenly spaced ticks, uneven steps');
+        body+=`<rect x="${L-58}" y="${T-12}" width="54" height="${ph+24}" rx="20" fill="none" stroke="${C.crimson}" stroke-width="2.2" stroke-dasharray="7 5"/>`+mark(L-58,T+ph*0.3,n2,f.sev);
+      } else if(f.tag==='3D'){
+        const n2=addNote(f.sev,'3D depth distorts bar heights'); body+=mark(L+pw-14,T+10,n2,f.sev);
+      } else if(f.tag==='dual axis'){
+        const n2=addNote(f.sev,'Two scales on one chart'); body+=mark(L+pw-38,T+10,n2,f.sev);
+      }
+    });
+  }
+  const ny=T+ph+(s.chart_type==='pie'?30:52);
+  notes.forEach((q,i)=>{const y=ny+i*28;
+    body+=mark(L+2,y-6,i+1,q.sev)+`<text x="${L+20}" y="${y}" ${HAND} font-size="23" font-weight="600" fill="${pen(q.sev)}">${esc(q.text)}</text>`;});
+  return o2+body+'</svg>';
+}
+
+// ================= cases =================
+const DEMOS=[
+ {id:'trunc',name:'Truncated bar',blurb:'94% vs 98%, axis from 92%',spec:{chart_type:'bar',title:'Customer satisfaction: Brand A vs Brand B',domain:'general',y_axis_min:92,y_axis_max:99,y_ticks:[92,93,94,95,96,97,98,99],is_inverted_y:false,has_3d_effect:false,has_dual_axis:false,values_are_percent:true,unit:'%',data:[{label:'Brand A',value:94},{label:'Brand B',value:98}],confidence:0.96,notes:'Pre-extracted demo JSON. Value axis begins at 92%.'}},
+ {id:'inv',name:'Inverted line',blurb:'A rise drawn as a fall',spec:{chart_type:'line',title:'Reported incidents per year after the 2005 law',domain:'policy',y_axis_min:0,y_axis_max:1000,y_ticks:[0,200,400,600,800,1000],is_inverted_y:true,has_3d_effect:false,has_dual_axis:false,values_are_percent:false,unit:'',data:[{label:'2000',value:520},{label:'2002',value:540},{label:'2004',value:560},{label:'2006',value:690},{label:'2008',value:760},{label:'2010',value:800},{label:'2012',value:830}],confidence:0.9,notes:'Pre-extracted demo JSON. Illustrative numbers, inspired by a widely shared 2014 news graphic. Values increase downward.'}},
+ {id:'pie',name:'Broken 3D pie',blurb:'Slices sum to 132%',spec:{chart_type:'pie',title:'Which candidate do voters back?',domain:'policy',y_axis_min:null,y_axis_max:null,y_ticks:[],is_inverted_y:false,has_3d_effect:true,has_dual_axis:false,values_are_percent:true,unit:'%',data:[{label:'Candidate A',value:48},{label:'Candidate B',value:41},{label:'Candidate C',value:43}],confidence:0.94,notes:'Pre-extracted demo JSON. Illustrative poll numbers (respondents could pick more than one).'}},
+ {id:'sci',name:'Honest science line',blurb:'Temperature, 14.0–15.2 °C',spec:{chart_type:'line',title:'Global mean surface temperature',domain:'science',y_axis_min:14.0,y_axis_max:15.2,y_ticks:[14.0,14.2,14.4,14.6,14.8,15.0,15.2],is_inverted_y:false,has_3d_effect:false,has_dual_axis:false,values_are_percent:false,unit:'°C',data:[{label:'1960',value:14.03},{label:'1970',value:14.03},{label:'1980',value:14.26},{label:'1990',value:14.45},{label:'2000',value:14.39},{label:'2010',value:14.72},{label:'2020',value:15.02},{label:'2023',value:15.17}],confidence:0.93,notes:'Pre-extracted demo JSON. Approximate values: 14 °C baseline plus NASA GISTEMP-style anomalies.'}}
+];
+
+// ================= verdict copy =================
+const STAMP={honest:'HONEST',context:'CONTEXT-DEPENDENT',misleading:'MISLEADING',unverifiable:'UNVERIFIED'};
+function headline(s,res){
+  if(res.verdict==='unverifiable') return 'We can’t read this chart reliably enough to judge it.';
+  const t=new Set(res.flags.filter(f=>f.sev==='high').map(f=>f.tag)), pts=s.data.filter(d=>Number.isFinite(d.value));
+  if(t.has('truncated axis')){
+    if(res.lieFactor===Infinity) return 'A cut-off axis makes a bar disappear.';
+    const mx=pts.reduce((a,b)=>b.value>a.value?b:a), mn=pts.reduce((a,b)=>b.value<a.value?b:a);
+    return `${mx.label||'The top bar'} looks ${fmt(res.visualRatio,1)}× bigger than ${mn.label||'the bottom bar'}. It’s really ${fmt(res.dataRatio,2)}×.`;
+  }
+  if(t.has('inverted axis')){const up=pts[pts.length-1].value>=pts[0].value; return `The numbers go ${up?'up':'down'}. The picture shows them going ${up?'down':'up'}.`;}
+  if(t.has('misrepresentation')) return `${pts.length} slices that add up to ${fmt(pts.reduce((a,d)=>a+d.value,0),1)}% of one whole.`;
+  if(t.has('inconsistent tick intervals')) return 'An uneven scale stretches part of the chart.';
+  if(t.has('dual axis')) return 'Two scales on one chart can make any link look real.';
+  if(t.has('3D')) return '3D perspective bends the sizes out of true.';
+  if(res.guardrail) return 'A zoomed axis, used honestly to show a small but real change.';
+  if(res.verdict==='context') return 'Fair enough, as long as you read the axis.';
+  return 'The picture matches the numbers.';
+}
+function keyFigure(s,res){
+  const pts=s.data.filter(d=>Number.isFinite(d.value)), u=s.unit||'';
+  if(res.verdict==='unverifiable') return {num:Math.round((s.human_verified?1:s.confidence)*100)+'%',cap:'Extraction confidence',sub:'Needs at least 60%, or a human check.'};
+  if(res.lieFactor!==null) return {num:fmt(res.lieFactor),cap:'Lie factor',sub:res.lieFactor>1.25?'Above the 1.25 limit.':'Within the 1.25 limit.',ratio:res};
+  if(s.chart_type==='pie'){const sum=pts.reduce((a,d)=>a+d.value,0);return {num:fmt(sum,1)+(s.values_are_percent?'%':''),cap:'Sum of the slices',sub:s.values_are_percent?'A whole is 100%.':'Raw values, shown as shares.'};}
+  return {num:fmt(s.y_axis_min??0,2)+u,cap:'Where the axis starts',sub:s.is_inverted_y?'And it runs upside down.':(s.y_axis_min>0?'Not zero: a zoomed view.':'From zero.')};
+}
+
+// ================= state & audit view =================
+const state={spec:null,raw:null,lineZero:false,pipe:['wait',''],upload:null,current:null};
+function setStatus(m,c=''){const e=$('#status');e.textContent=m;e.className='status '+c;}
+function setPipe(st){$('#pipe').innerHTML=st.map(([b,[c,sm]])=>`<div class="${c}"><b>${esc(b)}</b>${esc(sm)}</div>`).join('');}
+function heroHTML(s,res){
+  const k=keyFigure(s,res), v=res.verdict;
+  const stamp=res.guardrail&&v==='context'?'CONTEXT-DEPENDENT ZOOM · NEUTRAL':STAMP[v];
+  let ratio='';
+  if(k.ratio&&Number.isFinite(k.ratio.visualRatio)){const mx=Math.max(k.ratio.visualRatio,k.ratio.dataRatio);
+    ratio=`<div class="ratio"><div><span>Looks like</span><i style="width:${k.ratio.visualRatio/mx*100}%;background:var(--crimson)"></i><span>${fmt(k.ratio.visualRatio,2)}×</span></div><div><span>Really is</span><i style="width:${k.ratio.dataRatio/mx*100}%;background:var(--teal)"></i><span>${fmt(k.ratio.dataRatio,2)}×</span></div></div>`;}
+  const lead=v==='unverifiable'?res.reason:(res.flags[0]?res.flags[0].text:'Baseline, scale direction, tick spacing and structure all check out.');
+  return `<div><span class="stamp s-${v}">${stamp}</span><h1>${esc(headline(s,res))}</h1><p class="dek">${esc(lead)}</p></div>
+  <div class="fig-key"><div class="num ${v}">${esc(k.num)}</div><div class="cap">${esc(k.cap)}</div><div class="sub">${esc(k.sub)}</div>${ratio}</div>`;
+}
+function findingsHTML(res){
+  if(res.verdict==='unverifiable') return `<li class="unv"><div><span class="tagline">refused</span>${esc(res.reason)}</div></li>`;
+  if(!res.flags.length) return `<li class="ok"><div><span class="tagline">no misleaders</span>Zero or labelled baseline, upright scale, even ticks, flat 2D, parts that add up.</div></li>`;
+  return res.flags.map(f=>`<li class="${f.sev==='high'?'':'context'}"><div><span class="tagline">${esc(f.tag)} · ${f.sev==='high'?'distortion':'context'}</span>${esc(f.text)}</div></li>`).join('');
+}
+function runAudit(){
+  const s=state.spec; if(!s) return;
+  const res=audit(s);
+  $('#hero').innerHTML=heroHTML(s,res);
+  $('#findings').innerHTML=findingsHTML(res);
+  if(state.current==='upload') $('#origPane').innerHTML=`<img src="${state.upload}" alt="Your uploaded chart">`;
+  else $('#origPane').innerHTML=renderSVG(s,{res});
+  $('#zeroWrap').style.display=s.chart_type==='line'&&res.verdict!=='unverifiable'?'':'none';
+  $('#lineZero').checked=state.lineZero;
+  const ok=res.verdict!=='unverifiable'&&s.chart_type!=='other'&&s.data.some(d=>Number.isFinite(d.value));
+  $('#honestPane').innerHTML=ok?renderSVG(honestSpec(s,state.lineZero),{mode:'honest',lineZero:state.lineZero}):`<p class="empty">No correction drawn: ChartTruth won’t redraw numbers it couldn’t verify.</p>`;
+  $('#honestTag').textContent=!ok?'withheld':s.chart_type==='pie'?'rescaled to 100%, flat':s.chart_type==='line'?(state.lineZero?'from zero, upright':'upright, even ticks'):'zero baseline, even ticks, flat';
+  $('#raw').textContent=JSON.stringify(state.raw??s,null,2);
+  setPipe([['Vision read',state.pipe],['Human check',s.human_verified?['done','Verified by a person']:['done','Editable']],['Rule engine',['done',`${res.flags.length} rule${res.flags.length===1?'':'s'} fired`]],['Correction',ok?['done','Drawn']:['wait','Withheld']]]);
+}
+const opt=(l,v)=>l.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('');
+function renderEditor(){
+  const s=state.spec;
+  $('#editor').innerHTML=`<div class="fields">
+    <label>Chart type<select data-k="chart_type">${opt(['bar','line','pie','other'],s.chart_type)}</select></label>
+    <label>Subject<select data-k="domain">${opt(['general','science','finance','policy'],s.domain)}</select></label>
+    <label>Axis min<input data-k="y_axis_min" type="number" step="any" inputmode="decimal" value="${s.y_axis_min??''}"></label>
+    <label>Axis max<input data-k="y_axis_max" type="number" step="any" inputmode="decimal" value="${s.y_axis_max??''}"></label>
+    <label class="w2">Tick labels, bottom to top<input data-k="y_ticks" value="${esc(s.y_ticks.join(', '))}"></label>
+    <label>AI confidence<input data-k="confidence" type="number" min="0" max="1" step="0.05" value="${s.confidence}"></label>
+    <label>Unit<input data-k="unit" value="${esc(s.unit)}" placeholder="%, °C, $"></label>
+    <label class="w2" style="grid-column:1/-1">Title<input data-k="title" value="${esc(s.title)}"></label></div>
+  <div class="flags">
+    <label class="chk"><input type="checkbox" data-k="is_inverted_y" ${s.is_inverted_y?'checked':''}> Flipped axis</label>
+    <label class="chk"><input type="checkbox" data-k="has_3d_effect" ${s.has_3d_effect?'checked':''}> 3D effect</label>
+    <label class="chk"><input type="checkbox" data-k="has_dual_axis" ${s.has_dual_axis?'checked':''}> Two axes</label>
+    <label class="chk"><input type="checkbox" data-k="values_are_percent" ${s.values_are_percent?'checked':''}> Values are %</label>
+    <label class="chk"><input type="checkbox" data-k="human_verified" ${s.human_verified?'checked':''}> <b>I checked these values</b></label></div>
+  <table><thead><tr><th style="width:62%">Label</th><th style="text-align:right">Value</th><th></th></tr></thead><tbody>
+  ${s.data.map((d,i)=>`<tr><td><input data-row="${i}" data-f="label" value="${esc(d.label)}" aria-label="Label ${i+1}"></td><td class="n"><input data-row="${i}" data-f="value" type="number" step="any" inputmode="decimal" value="${d.value??''}" aria-label="Value ${i+1}"></td><td><button class="x" data-del="${i}" aria-label="Remove row ${i+1}">×</button></td></tr>`).join('')||'<tr><td colspan="3" class="small" style="padding:14px 0">No values yet. Add rows by hand, or read the chart with Gemini.</td></tr>'}
+  </tbody></table><button class="btn ghost sm" id="addRow" style="margin-top:10px">Add a row</button>
+  ${s.notes?`<p class="small" style="margin:10px 0 0">Reader’s note: ${esc(s.notes)}</p>`:''}`;
+}
+function onEdit(e){
+  const t=e.target,s=state.spec; if(!s||!t.matches('input,select')) return;
+  if(t.dataset.row!==undefined){const i=+t.dataset.row; if(t.dataset.f==='label') s.data[i].label=t.value; else s.data[i].value=num(t.value);}
+  else{const k=t.dataset.k; if(!k) return;
+    if(k==='y_ticks') s.y_ticks=t.value.split(/[,;\s]+/).map(num).filter(v=>v!==null);
+    else if(t.type==='checkbox') s[k]=t.checked;
+    else if(['y_axis_min','y_axis_max','confidence'].includes(k)) s[k]=num(t.value);
+    else s[k]=t.value;}
+  state.raw=null; runAudit();
+}
+$('#editor').addEventListener('input',onEdit);
+$('#editor').addEventListener('change',e=>{if(e.target.type==='checkbox'||e.target.tagName==='SELECT') onEdit(e);});
+$('#editor').addEventListener('click',e=>{const s=state.spec;if(!s) return;
+  const del=e.target.closest('[data-del]'); if(del){s.data.splice(+del.dataset.del,1);renderEditor();runAudit();}
+  if(e.target.id==='addRow'){s.data.push({label:`Item ${s.data.length+1}`,value:0});renderEditor();runAudit();}});
+$('#lineZero').addEventListener('change',e=>{state.lineZero=e.target.checked;runAudit();});
+
+function loadSpec(raw,pipe,current,tag){
+  state.raw=raw; state.spec=normalizeSpec(raw); state.pipe=pipe; state.current=current;
+  state.lineZero=!(state.spec.domain==='science'||state.spec.domain==='finance');
+  $('#origTag').textContent=tag;
+  document.querySelectorAll('.case').forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===current));
+  renderEditor(); runAudit();
+}
+function loadDemo(id){const d=DEMOS.find(x=>x.id===id); loadSpec(JSON.parse(JSON.stringify(d.spec)),['done','Pre-read (works offline)'],id,'illustrative case'); setStatus('');}
+function renderCases(){
+  $('#cases').innerHTML=DEMOS.map(d=>`<button class="case" data-id="${d.id}" aria-pressed="false"><span class="th">${renderSVG(normalizeSpec(d.spec),{thumb:true})}</span><b>${esc(d.name)}</b><small>${esc(d.blurb)}</small></button>`).join('')
+   +`<button class="case drop" data-id="upload" id="drop" aria-pressed="false"><span class="th" id="dropTh">+</span><b>Your chart</b><small>Drop or choose a PNG / JPG</small></button><input type="file" id="file" accept="image/png,image/jpeg,image/webp" hidden>`;
+}
+renderCases();
+$('#cases').addEventListener('click',e=>{const b=e.target.closest('.case'); if(!b) return; if(b.dataset.id==='upload'){ if(state.upload&&state.current!=='upload'){loadUploadState();} else $('#file').click(); } else loadDemo(b.dataset.id);});
+
+// ================= upload + Gemini =================
+let uploadSpec=null;
+function loadUploadState(){loadSpec(uploadSpec||{chart_type:'bar',title:'Your chart',data:[],confidence:0},uploadSpec&&uploadSpec.__read?['done','Read by Gemini']:['wait','Waiting for Gemini or you'],'upload','your upload');}
+function readFile(f){
+  if(!f||!/^image\/(png|jpeg|webp)$/.test(f.type)){setStatus('Please choose a PNG, JPG or WebP image.','err');return;}
+  const fr=new FileReader();
+  fr.onload=()=>{const img=new Image();img.onload=()=>{
+    const sc=Math.min(1,1600/Math.max(img.width,img.height)); let url=fr.result;
+    if(sc<1){const c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);c.getContext('2d').drawImage(img,0,0,c.width,c.height);url=c.toDataURL('image/png');}
+    state.upload=url; $('#dropTh').innerHTML=`<img src="${url}" alt="">`;
+    uploadSpec={chart_type:'bar',title:f.name.replace(/\.[^.]+$/,''),domain:'general',data:[],confidence:0,notes:'Not read yet. Add a Gemini key and press “Read chart”, or type the values yourself and tick “I checked these values”.'};
+    loadUploadState(); updateAnalyze();
+    if($('#apiKey').value.trim()) analyze(); else setStatus('Image loaded. Add a Gemini key to read it, or enter the numbers yourself below.');
+  };img.onerror=()=>setStatus('That image could not be opened.','err');img.src=fr.result;};
+  fr.readAsDataURL(f);
+}
+function updateAnalyze(){$('#analyze').disabled=!(state.upload&&$('#apiKey').value.trim());}
+function parseJSONLoose(t){t=t.trim().replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();
+  try{return JSON.parse(t);}catch(e){const m=t.match(/\{[\s\S]*\}/);if(m) return JSON.parse(m[0]);throw new Error('The model did not return valid JSON.');}}
+async function analyze(){
+  if(!state.upload) return;
+  const key=$('#apiKey').value.trim(), model=$('#model').value.trim()||'gemini-3.5-flash';
+  const [meta,b64]=state.upload.split(','); const mime=(meta.match(/data:(.*?);/)||[])[1]||'image/png';
+  $('#analyze').disabled=true; setStatus(`Reading the chart with ${model}…`);
+  try{
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:'POST',
+      headers:{'Content-Type':'application/json','x-goog-api-key':key},
+      body:JSON.stringify({contents:[{role:'user',parts:[{text:EXTRACT_PROMPT},{inline_data:{mime_type:mime,data:b64}}]}],generationConfig:{responseMimeType:'application/json'}})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error((j.error&&j.error.message)||`HTTP ${r.status}`);
+    const parts=(j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts)||[];
+    const text=parts.filter(p=>p.text&&!p.thought).map(p=>p.text).join('');
+    if(!text) throw new Error('The model returned no text (it may have been blocked).');
+    const raw=parseJSONLoose(text); uploadSpec={...raw,__read:true};
+    loadSpec(raw,['done',`${model}, ${Math.round(normalizeSpec(raw).confidence*100)}% sure`],'upload','your upload');
+    setStatus('Read complete. Check the numbers below; every edit re-runs the audit.','ok');
+  }catch(err){
+    const blocked=err instanceof TypeError;
+    setStatus((blocked?'Couldn’t reach Gemini. This preview host blocks outside requests, or you’re offline. Open the GitHub Pages copy to use Gemini.':'Gemini error: '+err.message)+' You can still type the values below.','err');
+    state.pipe=['err','Read failed']; runAudit();
+  }finally{updateAnalyze();}
+}
+const drop=()=>$('#drop');
+$('#cases').addEventListener('change',e=>{if(e.target.id==='file') readFile(e.target.files[0]);});
+['dragenter','dragover'].forEach(ev=>$('#cases').addEventListener(ev,e=>{if(e.target.closest('#drop')){e.preventDefault();drop().classList.add('over');}}));
+['dragleave','drop'].forEach(ev=>$('#cases').addEventListener(ev,e=>{if(e.target.closest('#drop')){e.preventDefault();drop().classList.remove('over');if(ev==='drop') readFile(e.dataTransfer.files[0]);}}));
+$('#analyze').addEventListener('click',analyze);
+$('#apiKey').addEventListener('input',()=>{updateAnalyze();if($('#remember').checked) try{sessionStorage.setItem('ct_key',$('#apiKey').value);}catch(e){}});
+$('#remember').addEventListener('change',e=>{try{e.target.checked?sessionStorage.setItem('ct_key',$('#apiKey').value):sessionStorage.removeItem('ct_key');}catch(x){}});
+try{const k=sessionStorage.getItem('ct_key');if(k){$('#apiKey').value=k;$('#remember').checked=true;}}catch(e){}
+
+// ================= lab =================
+const LAB=[{label:'Store A',value:87},{label:'Store B',value:90},{label:'Store C',value:93},{label:'Store D',value:96}];
+function runLab(){
+  const st=+$('#labStart').value, r=100-st, fr=$('#labTicks').checked?[0,.55,.75,.85,.93,1]:[0,.2,.4,.6,.8,1];
+  const s=normalizeSpec({chart_type:'bar',title:'Customer satisfaction by store',domain:'general',y_axis_min:st,y_axis_max:100,
+    y_ticks:fr.map(f=>Math.round((st+f*r)*10)/10),is_inverted_y:$('#labInv').checked,has_3d_effect:$('#lab3d').checked,has_dual_axis:false,values_are_percent:true,unit:'%',data:LAB,confidence:1});
+  const res=audit(s), p=lieFactorParts(LAB.map(d=>d.value),st);
+  $('#labStartV').textContent=st+'%';
+  $('#labChart').innerHTML=renderSVG(s,{res});
+  $('#labChart').style.transform=s.has_3d_effect?'rotateX(16deg) rotateY(-14deg)':'none';
+  $('#kVis').textContent=fmt(p.visual,2)+'×'; $('#kData').textContent=fmt(p.data,2)+'×';
+  $('#kLf').textContent=fmt(p.lf,2); $('#kLf').style.color=p.lf>1.25?C.crimson:C.teal; $('#kVis').style.color=p.lf>1.25?C.crimson:'';
+  $('#labVerdict').innerHTML=`<span class="stamp s-${res.verdict}">${STAMP[res.verdict]}</span><p style="font:600 20px/1.25 var(--serif);margin:0">${esc(headline(s,res))}</p><ol class="find">${findingsHTML(res)}</ol>`;
+  $('#labHonest').innerHTML='<p class="lbl" style="margin:6px 0">The honest version</p>'+renderSVG(honestSpec(s,false),{mode:'honest'});
+}
+['labStart','lab3d','labInv','labTicks'].forEach(id=>{$('#'+id).addEventListener('input',runLab);$('#'+id).addEventListener('change',runLab);});
+$('#labReset').addEventListener('click',()=>{$('#labStart').value=0;['lab3d','labInv','labTicks'].forEach(id=>$('#'+id).checked=false);runLab();});
+
+// ================= evidence =================
+const SAMPLE={is_sample:true,note:'ILLUSTRATIVE PLACEHOLDER, not real results. Run eval_misviz.py to replace.',dataset:'UKPLab/misviz',split:'test',model:'gemini-3.5-flash',n_total:45,n_misleading:30,n_clean:15,
+ methods:{zero_shot:{label:'Zero-shot Gemini',tp:24,fp:7,fn:6,tn:8,abstained:0},charttruth:{label:'ChartTruth hybrid',tp:21,fp:2,fn:9,tn:13,abstained:4}}};
+function met(m){const p=m.tp+m.fp?m.tp/(m.tp+m.fp):0,r=m.tp+m.fn?m.tp/(m.tp+m.fn):0;
+  return{p:m.precision??p,r:m.recall??r,f:m.f1??(p+r?2*p*r/(p+r):0),fpr:m.fpr??(m.fp+m.tn?m.fp/(m.fp+m.tn):0)};}
+function renderBench(j){
+  const ms=j.methods||{},keys=Object.keys(ms); if(!keys.length) throw new Error('no "methods" object found');
+  const pc=v=>(Number(v)*100).toFixed(1)+'%';
+  let h=j.is_sample?`<div class="note-band"><b>Sample layout only.</b> These numbers are made up. Run <code>eval_misviz.py</code> and paste the real output.</div>`
+    :`<div class="note-band real"><b>Real run:</b> ${esc(j.dataset)}, ${esc(j.split)} split, ${esc(j.model)}, ${esc(j.n_total)} charts (${esc(j.n_misleading)} misleading, ${esc(j.n_clean)} clean)${j.generated?', '+esc(j.generated):''}.</div>`;
+  h+=`<table class="mt"><thead><tr><th>Method</th><th>Precision</th><th>Recall</th><th>F1</th><th>False alarms</th><th>Refused</th></tr></thead><tbody>`;
+  keys.forEach(k=>{const m=ms[k],x=met(m);h+=`<tr><td>${esc(m.label||k)}</td><td>${pc(x.p)}</td><td>${pc(x.r)}</td><td>${pc(x.f)}</td><td>${pc(x.fpr)}</td><td>${esc(m.abstained??0)}</td></tr>`;});
+  h+='</tbody></table><div class="cms">';
+  keys.forEach(k=>{const m=ms[k];h+=`<div><span class="lbl">${esc(m.label||k)}</span><div class="cm"><span></span><span>Flagged</span><span>Not flagged</span>
+    <span style="text-align:right">Misleading</span><b class="good">${esc(m.tp)}</b><b class="bad">${esc(m.fn)}</b>
+    <span style="text-align:right">Clean</span><b class="bad">${esc(m.fp)}</b><b class="good">${esc(m.tn)}</b></div></div>`;});
+  h+='</div><p class="small" style="margin-top:14px">“False alarms” is the false-positive rate on clean charts. Refusals count as “not flagged”, so the hybrid method never scores points by declining to answer.</p>';
+  $('#benchOut').innerHTML=h;
+}
+$('#benchRender').addEventListener('click',()=>{try{renderBench(JSON.parse($('#benchJson').value));$('#benchStatus').textContent='Shown.';$('#benchStatus').className='status ok';}
+  catch(e){$('#benchStatus').textContent='That isn’t valid results JSON: '+e.message;$('#benchStatus').className='status err';}});
+$('#benchSample').addEventListener('click',()=>{$('#benchJson').value=JSON.stringify(SAMPLE,null,2);renderBench(SAMPLE);});
+
+// ================= tabs & boot =================
+function showTab(name){
+  document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected',x.dataset.tab===name));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+name));
+  if(name==='lab') runLab();
+}
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{showTab(b.dataset.tab);try{history.replaceState(null,'','#'+b.dataset.tab);}catch(e){}}));
+$('#benchJson').value=JSON.stringify(SAMPLE,null,2); renderBench(SAMPLE);
+loadDemo('trunc'); runLab();
+const h=(location.hash||'').slice(1); if(['lab','bench'].includes(h)) showTab(h);
+}
+</script>
+</body>
+</html>
