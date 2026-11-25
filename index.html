@@ -818,6 +818,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-copy]'); i
   const k=b.dataset.copy; if(k==='caption') copyText($('#caption').textContent); else if(k==='alt') copyText($('#alt').textContent);
   else if(k==='json') copyText(JSON.stringify({input:state.spec,verdict:state.res.verdict,lie_factor:state.res.lieFactor,flags:state.res.flags,caption:$('#caption').textContent,alt_text:$('#alt').textContent},null,2));});
 function wrapText(t,max){const w=t.split(' '),l=[];let c='';w.forEach(x=>{if((c+' '+x).trim().length>max){l.push(c.trim());c=x;}else c+=' '+x;});if(c.trim()) l.push(c.trim());return l;}
+let dl=null; try{if(window.claude&&typeof window.claude.use==='function') window.claude.use('downloads').then(d=>{dl=d;}).catch(()=>{});}catch(e){}
 $('#exportBtn').addEventListener('click',()=>{
   const s=state.spec,res=state.res; if(!s) return;
   const nest=(svg,x,y,w)=>svg.replace('<svg ',`<svg x="${x}" y="${y}" width="${w}" `);
@@ -833,8 +834,11 @@ $('#exportBtn').addEventListener('click',()=>{
    ${pub}${hon}<text x="40" y="${H-24}" font-family="Arial,Helvetica,sans-serif" font-size="15" fill="#6B7483">ChartTruth: hybrid AI + deterministic chart auditor${res.lieFactor!==null&&Number.isFinite(res.lieFactor)?`  ·  Lie factor ${fmt(res.lieFactor)}`:''}</text></svg>`;
   const img=new Image();
   img.onload=()=>{try{const c=document.createElement('canvas');c.width=W*2;c.height=H*2;const g=c.getContext('2d');g.scale(2,2);g.drawImage(img,0,0);
-    c.toBlob(b=>{if(!b){flash('Could not create the image.','err');return;}const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`charttruth-${(s.title||'chart').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40)}.png`;document.body.appendChild(a);a.click();a.remove();
-      flash('Card downloaded. (If nothing appeared, this preview blocks downloads; use the GitHub Pages copy.)');},'image/png');}catch(e){flash('Could not create the image here: '+e.message,'err');}};
+    c.toBlob(b=>{if(!b){flash('Could not create the image.','err');return;}
+      const name=`charttruth-${(s.title||'chart').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40)}.png`;
+      if(dl){dl.save({filename:name,data:b}).then(()=>flash('Correction card saved.')).catch(e=>flash(e&&e.code==='declined'?'Download cancelled.':'This view can’t save files: '+((e&&(e.message||e.code))||''),'err'));return;}
+      const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();
+      flash('Correction card downloaded.');},'image/png');}catch(e){flash('Could not create the image here: '+e.message,'err');}};
   img.onerror=()=>flash('Could not create the image.','err');
   img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
 });
