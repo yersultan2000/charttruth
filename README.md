@@ -18,7 +18,16 @@ ChartTruth checks bar, line and pie charts for visual misinformation, then draws
    - **refusal:** below 60% confidence, it says "unable to verify" instead of guessing
 4. **Honest render:** zero baseline, even ticks, flat 2D, pies rescaled to 100%.
 
-Four built-in cases work fully offline. There is no backend and no build step: open `index.html`.
+## Features
+- **Correction wipe:** drag (or use the arrow keys) to slide from the published chart to the honest one, with red-pen marks numbered to each finding
+- **8 offline case files:** truncated bar, upside-down line, pie over 100%, uneven scale, dual axis, 3D bars, honest zoom and honest bar (to show it doesn't flag everything)
+- **Show the math:** every finding prints the exact calculation behind it
+- **Honest caption and screen-reader alt text,** generated automatically, plus a downloadable correction card (PNG)
+- **Spot the Lie game:** 8 freshly generated charts per game; the rule engine is the answer key
+- **Deception lab:** move the axis, add 3D, flip the scale, and watch the lie factor change live
+- **How it works:** pipeline, AI-vs-hybrid comparison, benchmark results and ethics standards
+
+There is no backend and no build step: open `index.html`.
 
 ## Benchmark
 `eval_misviz.py` compares zero-shot Gemini with the ChartTruth hybrid on real-world charts from [UKPLab/misviz](https://huggingface.co/datasets/UKPLab/misviz). It reports precision, recall, F1 and false-positive rate. The rule engine is a line-for-line port of the one in `index.html`.

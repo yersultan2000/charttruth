@@ -3,294 +3,385 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ChartTruth — chart corrections desk</title>
+<title>ChartTruth — catch misleading charts</title>
+<meta name="description" content="ChartTruth audits bar, line and pie charts for visual misinformation with a hybrid AI + deterministic math pipeline, then redraws them honestly.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 <style>
-/* VOICE: a newspaper corrections desk — calm, exact, a little stern.
-   IDEA: the chart as a proof sheet; the original gets red-pen markup, the correction runs beside it.
-   PICTURE: before/after pair with hand-drawn annotations numbered to the findings.
-   COLOUR/TYPE: warm paper, ink, cobalt for actions; teal/amber/crimson only for verdicts. Newsreader + Instrument Sans + JetBrains Mono figures + Caveat for the pen.
-   LAYOUT: masthead, case strip, headline verdict with one huge figure, before/after, findings + data. */
-:root{color-scheme:light;--paper:#FBFAF7;--card:#FFFFFF;--ink:#16181D;--ink2:#3B3D42;--muted:#6E6C66;--rule:#DCD8CF;--rule2:#ECE9E2;
---cobalt:#1D4ED8;--cobalt-bg:#EEF2FD;--teal:#0F766E;--teal-bg:#E9F5F2;--amber:#B45309;--amber-bg:#FBF2E4;--crimson:#B91C1C;--crimson-bg:#FBECEA;
---serif:"Newsreader",Georgia,"Times New Roman",serif;--sans:"Instrument Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
---mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;--hand:"Caveat","Segoe Print","Bradley Hand",cursive}
+/* VOICE: a precise, friendly instrument; plain words, no hype.
+   IDEA: an optician's correction: the same chart seen through the right lens. Drag the lens and the bars fall back into true proportion.
+   PICTURE: the correction wipe, published chart over corrected chart with a cobalt handle; red-pen marks numbered to the findings.
+   COLOUR/TYPE: white and cool fog, ink #101418, cobalt for action; teal, amber and crimson only for verdicts. Schibsted Grotesk throughout, tabular figures; Caveat only for pen marks on charts.
+   LAYOUT: case strip, then verdict text beside the wipe, then findings and data, then sharing. */
+:root{color-scheme:light;--bg:#FFFFFF;--fog:#F2F4F7;--fog2:#E8ECF1;--ink:#101418;--ink2:#465061;--muted:#6B7483;--line:#DFE3EA;
+--cobalt:#1D4ED8;--cobalt-d:#1639A6;--cobalt-bg:#EBF0FD;--teal:#0F766E;--teal-bg:#E7F4F1;--amber:#B45309;--amber-bg:#FBF1E3;--crimson:#B91C1C;--crimson-bg:#FBEBEA;
+--f:"Schibsted Grotesk",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--pen:"Caveat","Segoe Print","Bradley Hand",cursive;
+--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--r:10px}
 *{box-sizing:border-box;min-width:0}
-html{scroll-padding-top:80px}
-body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 var(--sans);overflow-x:clip;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1240px;margin:0 auto;padding:0 max(4vw,16px)}
+html{scroll-padding-top:84px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--f);font-variant-numeric:tabular-nums;overflow-x:clip;-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
-:focus-visible{outline:2px solid var(--cobalt);outline-offset:2px;border-radius:4px}
+:focus-visible{outline:2.5px solid var(--cobalt);outline-offset:2px;border-radius:6px}
+.wrap{max-width:1240px;margin:0 auto;padding:0 max(4vw,16px)}
 
-/* masthead */
-.mast{border-bottom:3px double var(--ink);background:var(--paper);position:sticky;top:0;z-index:20}
-.mast .wrap{display:flex;align-items:flex-end;gap:24px;padding-top:16px;padding-bottom:10px;flex-wrap:wrap}
-.logo{display:flex;align-items:baseline;gap:12px;text-decoration:none;color:var(--ink)}
-.logo b{font:600 30px/1 var(--serif);letter-spacing:-.02em}
-.logo b i{font-style:italic;font-weight:400;color:var(--crimson)}
-.logo span{font-size:13px;color:var(--muted)}
-nav{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
-nav button{border:0;background:none;padding:10px 12px;font-weight:500;font-size:15px;color:var(--ink2);cursor:pointer;border-bottom:2px solid transparent;min-height:44px}
-nav button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--ink)}
-nav button:hover{color:var(--ink)}
-main{padding:24px 0 72px}
+/* top bar */
+.top{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.92);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:20px;min-height:64px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font-weight:800;font-size:21px;letter-spacing:-.02em}
+.seg{margin-left:auto;display:flex;gap:2px;background:var(--fog);padding:4px;border-radius:12px;flex-wrap:wrap}
+.seg button{border:0;background:none;border-radius:9px;padding:8px 14px;font-weight:600;font-size:14.5px;color:var(--ink2);cursor:pointer;min-height:38px}
+.seg button[aria-selected=true]{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(16,20,24,.12)}
+main{padding:22px 0 80px}
 .tab{display:none}.tab.on{display:block}
 
 /* type */
-.kicker{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 10px}
-h1,h2{font-family:var(--serif);font-weight:600;letter-spacing:-.015em;text-wrap:balance;margin:0}
-h1{font-size:clamp(32px,4.4vw,52px);line-height:1.05}
-h2{font-size:26px;line-height:1.15}
-.dek{font-size:18px;line-height:1.5;color:var(--ink2);max-width:62ch;margin:14px 0 0}
-.lbl{font-size:13px;font-weight:600;color:var(--ink2)}
-.small{font-size:13px;color:var(--muted)}
-.mono{font-family:var(--mono)}
-code{font-family:var(--mono);font-size:13px;background:var(--rule2);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+h1,h2,h3{margin:0;letter-spacing:-.022em;text-wrap:balance}
+h1{font-size:clamp(30px,3.9vw,48px);line-height:1.04;font-weight:800}
+h2{font-size:24px;line-height:1.15;font-weight:750}
+h3{font-size:16px;font-weight:700;letter-spacing:-.01em}
+.lead{font-size:18px;line-height:1.5;color:var(--ink2);margin:14px 0 0;max-width:60ch}
+.hint{font-size:14px;color:var(--muted);margin:4px 0 0}
+p{margin:0}
 
 /* case strip */
-.cases{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
-.case{display:flex;flex-direction:column;text-align:left;border:1px solid var(--rule);background:var(--card);border-radius:6px;padding:10px;cursor:pointer;transition:border-color .15s,transform .15s}
-.case:hover{border-color:#a9a499}
-.case[aria-pressed=true]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
-.case .th{aspect-ratio:16/10;background:var(--rule2);border-radius:3px;overflow:hidden;margin-bottom:8px;display:grid;place-items:center}
-.case .th svg{width:100%;height:100%}
-.case b{font-size:14.5px;font-weight:600;line-height:1.25}
-.case small{font-size:13px;color:var(--muted);line-height:1.35;margin-top:2px}
-.case.drop{border-style:dashed;border-color:#a9a499;background:transparent}
-.case.drop .th{background:transparent;border:1px dashed var(--rule);font:500 30px var(--serif);color:var(--muted)}
-.case.drop.over{border-color:var(--cobalt);background:var(--cobalt-bg)}
-.case.drop .th img{width:100%;height:100%;object-fit:cover}
-
-.gem{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;padding:10px 12px;border:1px solid var(--rule);border-radius:6px;background:var(--card)}
-.gem input[type=password],.gem input[list]{height:40px;border:1px solid var(--rule);border-radius:5px;padding:0 10px;font-size:16px;background:var(--paper)}
-.gem #apiKey{flex:1 1 220px}.gem #model{flex:0 1 190px}
-.btn{height:44px;padding:0 18px;border-radius:5px;border:1px solid var(--cobalt);background:var(--cobalt);color:#fff;font-weight:600;font-size:15px;cursor:pointer}
+.strip{display:grid;grid-template-columns:repeat(9,minmax(112px,1fr));gap:10px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x proximity}
+.case{scroll-snap-align:start;display:flex;flex-direction:column;gap:6px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:var(--r);padding:7px 7px 9px;cursor:pointer;transition:border-color .15s}
+.case:hover{border-color:#b8c0cc}
+.case[aria-pressed=true]{border-color:var(--cobalt);box-shadow:0 0 0 2px var(--cobalt) inset}
+.case .th{aspect-ratio:16/10;border-radius:6px;overflow:hidden;background:var(--fog);display:grid;place-items:center}
+.case .th svg{width:100%;height:100%;display:block}
+.case b{font-size:13.5px;font-weight:650;line-height:1.2;padding:0 2px}
+.case .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
+.case.up{border-style:dashed}
+.case.up .th{background:transparent;border:1.5px dashed var(--line);font-size:26px;color:var(--muted)}
+.case.up .th img{width:100%;height:100%;object-fit:cover}
+.case.up.over{border-color:var(--cobalt);background:var(--cobalt-bg)}
+details.gem{margin-top:6px}
+details.gem summary{cursor:pointer;font-weight:600;font-size:14.5px;color:var(--ink2);padding:6px 0;list-style:none}
+details.gem summary::before{content:"+ ";color:var(--cobalt);font-weight:800}
+details.gem[open] summary::before{content:"– "}
+.gemrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 0 4px}
+.in{height:44px;border:1px solid var(--line);border-radius:8px;padding:0 12px;font-size:16px;background:#fff}
+.in:focus{border-color:var(--cobalt)}
+#apiKey{flex:1 1 260px}#model{flex:0 1 200px}
+.btn{height:44px;padding:0 18px;border-radius:8px;border:1px solid var(--cobalt);background:var(--cobalt);color:#fff;font-weight:650;font-size:15px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--cobalt-d)}
 .btn:disabled{opacity:.4;cursor:not-allowed}
-.btn.ghost{background:transparent;color:var(--cobalt)}
-.btn.sm{height:36px;padding:0 12px;font-size:14px}
-.chk{display:inline-flex;gap:7px;align-items:center;font-size:14px;color:var(--ink2);cursor:pointer;min-height:32px}
-.chk input{width:16px;height:16px;accent-color:var(--cobalt)}
-.status{font-size:14px;margin:8px 0 0;min-height:1.3em;color:var(--ink2)}
+.btn.ghost{background:#fff;color:var(--cobalt)}
+.btn.ghost:hover{background:var(--cobalt-bg)}
+.btn.sm{height:38px;padding:0 13px;font-size:14px}
+.chk{display:inline-flex;gap:8px;align-items:center;font-size:14.5px;color:var(--ink2);cursor:pointer;min-height:34px}
+.chk input{width:17px;height:17px;accent-color:var(--cobalt);margin:0}
+.status{font-size:14.5px;min-height:1.4em;margin:4px 0 0;color:var(--ink2)}
 .status.err{color:var(--crimson)}.status.ok{color:var(--teal)}
 
-/* verdict hero */
-.hero{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:40px;align-items:end;padding:36px 0 26px;border-bottom:1px solid var(--rule);margin-bottom:26px}
-.stamp{display:inline-block;font:700 13px/1 var(--mono);letter-spacing:.08em;padding:7px 10px 6px;border:2px solid currentColor;border-radius:3px;transform:rotate(-2deg);margin-bottom:16px}
-.s-misleading{color:var(--crimson)}.s-context{color:var(--amber)}.s-honest{color:var(--teal)}.s-unverifiable{color:var(--muted)}
-.fig-key{border-left:1px solid var(--rule);padding-left:28px}
-.fig-key .num{font:700 clamp(64px,8vw,104px)/.9 var(--mono);letter-spacing:-.04em}
-.fig-key .num.misleading{color:var(--crimson)}.fig-key .num.context{color:var(--amber)}.fig-key .num.honest{color:var(--teal)}.fig-key .num.unverifiable{color:var(--muted)}
-.fig-key .cap{font-size:15px;font-weight:600;margin-top:10px}
-.fig-key .sub{font-size:14px;color:var(--muted)}
-.ratio{margin-top:14px;display:grid;gap:6px;font-size:13px}
-.ratio div{display:grid;grid-template-columns:76px 1fr 54px;gap:8px;align-items:center}
-.ratio i{display:block;height:10px;border-radius:2px}
-.ratio span:last-child{font-family:var(--mono);text-align:right}
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(24px,3.4vw,48px);align-items:start;margin-top:18px}
+.pill{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:14px;border-radius:999px;padding:5px 12px 5px 9px;margin-bottom:14px}
+.pill i{width:9px;height:9px;border-radius:50%;background:currentColor}
+.v-misleading{color:var(--crimson);background:var(--crimson-bg)}.v-context{color:var(--amber);background:var(--amber-bg)}
+.v-honest{color:var(--teal);background:var(--teal-bg)}.v-unverifiable{color:var(--ink2);background:var(--fog)}
+.key{margin-top:24px;padding-top:18px;border-top:1px solid var(--line);display:grid;grid-template-columns:auto 1fr;gap:6px 18px;align-items:end}
+.key .num{font-size:clamp(54px,6vw,80px);font-weight:800;line-height:.9;letter-spacing:-.045em}
+.key .num.misleading{color:var(--crimson)}.key .num.context{color:var(--amber)}.key .num.honest{color:var(--teal)}.key .num.unverifiable{color:var(--muted)}
+.key .cap{font-weight:700;font-size:15px}.key .sub{font-size:14px;color:var(--muted)}
+.bars{grid-column:1/-1;display:grid;gap:7px;margin-top:12px;font-size:14px}
+.bars div{display:grid;grid-template-columns:86px 1fr 62px;gap:10px;align-items:center}
+.bars i{display:block;height:12px;border-radius:3px;transition:width .4s ease}
+.bars span:last-child{text-align:right;font-weight:650}
 
-/* before / after */
-.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
-.sheet{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:16px 16px 12px}
-.sheet header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
-.sheet header h3{font:600 15px var(--sans);margin:0}
-.sheet header .small{font-size:13px}
-.sheet .art{min-height:300px;display:grid;place-items:center}
-.sheet .art svg{width:100%;height:auto;display:block}
-.sheet .art img{max-width:100%;max-height:460px;border-radius:3px}
-.empty{color:var(--muted);font-size:15px;text-align:center;padding:30px 16px;max-width:36ch}
-.sheet.after{border-color:#BFD8D2}
+/* wipe */
+.viewer{position:relative}
+.wipe{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#fff;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:ew-resize}
+.wipe .under svg,.wipe .over svg{display:block;width:100%;height:auto}
+.wipe .over{position:absolute;inset:0;clip-path:inset(0 calc(100% - var(--x,50%)) 0 0);background:#F6F5F0}
+.wipe .over img{width:100%;height:100%;object-fit:contain}
+.handle{position:absolute;top:0;bottom:0;left:var(--x,50%);width:44px;margin-left:-22px;cursor:ew-resize;z-index:2}
+.handle::before{content:"";position:absolute;left:21px;top:0;bottom:0;width:2.5px;background:var(--cobalt)}
+.handle span{position:absolute;top:50%;left:50%;width:42px;height:42px;border-radius:50%;background:var(--cobalt);transform:translate(-50%,-50%);display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(29,78,216,.35)}
+/*wtag*/.wtag{position:absolute;top:10px;font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:999px;z-index:1;pointer-events:none}
+.wtag.l{left:10px;background:#fff;color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+.wtag.r{right:10px;background:var(--teal);color:#fff}
+.vbar{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;margin-top:10px}
 
-/* findings + data */
-.lower{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:40px;margin-top:36px}
-ol.find{list-style:none;padding:0;margin:14px 0 0;counter-reset:f}
-ol.find li{counter-increment:f;display:grid;grid-template-columns:30px 1fr;gap:10px;padding:12px 0;border-top:1px solid var(--rule2)}
-ol.find li::before{content:counter(f);width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 12px var(--mono);color:#fff;background:var(--crimson);margin-top:2px}
-ol.find li.context::before{background:var(--amber)}ol.find li.ok::before{background:var(--teal);content:"✓"}ol.find li.unv::before{background:var(--muted);content:"?"}
-.tagline{font:500 12px var(--mono);color:var(--muted);display:block;margin-bottom:2px}
-.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin-top:26px;border-top:1px solid var(--rule)}
-.steps div{padding:10px 12px 0 0;font-size:13px;color:var(--muted)}
-.steps b{display:block;color:var(--ink);font-weight:600;font-size:14px}
-.steps .done b::before{content:"● ";color:var(--teal)}.steps .wait b::before{content:"○ ";color:var(--muted)}.steps .err b::before{content:"● ";color:var(--crimson)}
+/* work area */
+.work{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:clamp(24px,3.4vw,48px);margin-top:44px}
+.panel{border-top:2px solid var(--ink);padding-top:14px}
+ol.find{list-style:none;margin:12px 0 0;padding:0;counter-reset:f}
+ol.find>li{counter-increment:f;display:grid;grid-template-columns:30px 1fr;gap:10px;padding:13px 0;border-bottom:1px solid var(--line)}
+ol.find>li::before{content:counter(f);width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12.5px;color:#fff;background:var(--crimson);margin-top:1px}
+ol.find>li.context::before{background:var(--amber)}ol.find>li.ok::before{content:"✓";background:var(--teal)}ol.find>li.unv::before{content:"?";background:var(--muted)}
+.ftag{font-weight:700;font-size:14.5px;display:block}
+.ftag em{font-style:normal;font-weight:500;color:var(--muted);font-size:13.5px}
+details.math{margin-top:6px}
+details.math summary{cursor:pointer;font-size:13.5px;font-weight:650;color:var(--cobalt);list-style:none}
+details.math summary::before{content:"Show the math"}
+details.math[open] summary::before{content:"Hide the math"}
+.calc{margin-top:6px;background:var(--fog);border-radius:8px;padding:9px 12px;font:13px/1.7 var(--mono);color:var(--ink);overflow-x:auto;white-space:pre}
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:18px;font-size:13.5px}
+.flow div{padding:8px 10px 0 0;color:var(--muted);position:relative}
+.flow b{display:block;color:var(--ink);font-size:14px}
+.flow .done b{color:var(--teal)}.flow .err b{color:var(--crimson)}
+.flow div::before{content:"";display:block;height:4px;border-radius:2px;background:var(--line);margin-bottom:8px}
+.flow .done::before{background:var(--teal)}.flow .err::before{background:var(--crimson)}
 
-.fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
-.fields label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--ink2)}
-.fields .w2{grid-column:span 2}
-.fields input,.fields select,td input{height:40px;border:1px solid var(--rule);border-radius:5px;padding:0 9px;font-size:16px;font-weight:400;background:var(--card);width:100%}
-.flags{display:flex;flex-wrap:wrap;gap:4px 18px;margin:12px 0 6px}
-table{width:100%;border-collapse:collapse;margin-top:8px}
-th{text-align:left;font-size:13px;font-weight:600;color:var(--muted);padding:6px 6px 6px 0;border-bottom:1px solid var(--ink)}
-td{padding:6px 6px 6px 0;border-bottom:1px solid var(--rule2)}
-td.n input{font-family:var(--mono);text-align:right}
-.x{width:36px;height:36px;border:0;background:none;color:var(--muted);font-size:20px;cursor:pointer;border-radius:4px}
-.x:hover{background:var(--rule2);color:var(--crimson)}
+.share{margin-top:34px}
+.sharebox{background:var(--fog);border-radius:var(--r);padding:12px 14px;margin-top:10px}
+.sharebox p{font-size:15px}
+.sharebox .row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px}
+.sharebox .row b{font-size:13.5px;color:var(--ink2)}
+.linkbtn{border:0;background:none;color:var(--cobalt);font-weight:650;font-size:13.5px;cursor:pointer;padding:6px 4px;min-height:32px}
+
+.fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
+.fields label{display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:650;color:var(--ink2)}
+.fields .w2{grid-column:span 2}.fields .w4{grid-column:1/-1}
+.fields input,.fields select,td input{height:42px;border:1px solid var(--line);border-radius:8px;padding:0 10px;font-size:16px;font-weight:400;background:#fff;width:100%}
+.cues{display:flex;flex-wrap:wrap;gap:2px 18px;margin:12px 0 4px}
+table{width:100%;border-collapse:collapse;margin-top:6px}
+th{text-align:left;font-size:13.5px;font-weight:650;color:var(--muted);padding:6px 6px 6px 0;border-bottom:1px solid var(--ink)}
+td{padding:6px 6px 6px 0;border-bottom:1px solid var(--line)}
+td.n input{text-align:right}
+.x{width:38px;height:38px;border:0;background:none;color:var(--muted);font-size:21px;cursor:pointer;border-radius:8px}
+.x:hover{background:var(--crimson-bg);color:var(--crimson)}
 details.raw{margin-top:14px}details.raw summary{cursor:pointer;font-size:14px;color:var(--ink2)}
-pre{background:#16181D;color:#E8E6E1;border-radius:6px;padding:14px;overflow:auto;font:12.5px/1.6 var(--mono);max-height:340px}
+pre{background:var(--ink);color:#E6EAF0;border-radius:var(--r);padding:14px;overflow:auto;font:12.5px/1.6 var(--mono);max-height:340px;margin:8px 0 0}
+
+/* game */
+.game{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:clamp(24px,3.4vw,48px);margin-top:26px;align-items:start}
+.gchart{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#F6F5F0}
+.gchart svg{display:block;width:100%;height:auto}
+.score{display:flex;gap:18px;align-items:baseline;margin-bottom:14px}
+.score b{font-size:34px;font-weight:800;letter-spacing:-.03em}
+.score span{color:var(--muted);font-size:14px}
+.prog{display:flex;gap:4px;margin-bottom:18px}
+.prog i{flex:1;height:6px;border-radius:3px;background:var(--fog2)}
+.prog i.hit{background:var(--teal)}.prog i.miss{background:var(--crimson)}.prog i.now{background:var(--cobalt)}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opt{min-height:52px;text-align:left;border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:10px 14px;font-weight:650;font-size:15px;cursor:pointer}
+.opt:hover:not(:disabled){border-color:var(--cobalt);background:var(--cobalt-bg)}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--teal);background:var(--teal-bg);color:var(--teal)}
+.opt.wrong{border-color:var(--crimson);background:var(--crimson-bg);color:var(--crimson)}
+.fb{margin-top:16px;padding:14px;border-radius:var(--r);font-size:15.5px}
+.fb.good{background:var(--teal-bg)}.fb.bad{background:var(--crimson-bg)}
+.fb b{display:block;font-size:17px;margin-bottom:4px}
 
 /* lab */
-.labgrid{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.5fr) minmax(0,1fr);gap:24px;margin-top:26px}
-.ctrl{display:grid;gap:18px;align-content:start}
-.range label{display:flex;justify-content:space-between;font-weight:600;font-size:15px}
-.range output{font-family:var(--mono);color:var(--crimson)}
-input[type=range]{width:100%;accent-color:var(--crimson);height:32px}
-.toggles{display:grid;gap:4px}
-.big3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--ink);border-bottom:1px solid var(--rule)}
-.big3 div{padding:12px 4px}
-.big3 b{display:block;font:700 26px/1 var(--mono);letter-spacing:-.02em}
-.big3 small{font-size:12.5px;color:var(--muted)}
-.stage{perspective:1000px}
+.labgrid{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,8fr);gap:clamp(24px,3.4vw,48px);margin-top:26px;align-items:start}
+.ctrl{display:grid;gap:16px}
+.range label{display:flex;justify-content:space-between;font-weight:700;font-size:15.5px}
+.range output{color:var(--crimson)}
+input[type=range]{width:100%;accent-color:var(--cobalt);height:34px}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.trio div{background:var(--fog);border-radius:var(--r);padding:10px}
+.trio b{display:block;font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.trio small{font-size:13px;color:var(--muted)}
+.stage{perspective:1100px}
 .tilt{transition:transform .35s ease}
-@media (prefers-reduced-motion:reduce){.tilt,.case{transition:none}}
 
-/* evidence */
-.ev{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:36px;margin-top:26px}
-.note-band{border-left:3px solid var(--amber);background:var(--amber-bg);color:#7a3a07;padding:10px 14px;font-size:14px;border-radius:0 4px 4px 0;margin-bottom:16px}
-.note-band.real{border-color:var(--teal);background:var(--teal-bg);color:#0b4f49}
-.mt td,.mt th{text-align:right;font-variant-numeric:tabular-nums}
-.mt td:first-child,.mt th:first-child{text-align:left}
-.mt td{font-family:var(--mono);font-size:15px;padding:10px 6px 10px 0}
-.mt td:first-child{font-family:var(--sans);font-weight:600}
-.cms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:22px}
-.cm{display:grid;grid-template-columns:auto 1fr 1fr;gap:3px;font-size:12.5px;margin-top:8px}
-.cm span{padding:8px 4px;text-align:center;color:var(--muted)}
-.cm b{padding:12px 4px;text-align:center;font:700 22px var(--mono);border-radius:3px}
+/* how */
+.pipeline{list-style:none;padding:0;margin:26px 0 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;counter-reset:p}
+.pipeline li{counter-increment:p;padding:0 18px 0 0;position:relative}
+.pipeline li::before{content:counter(p);display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--ink);color:#fff;font-weight:800;margin-bottom:12px;position:relative;z-index:1}
+.pipeline li::after{content:"";position:absolute;top:19px;left:38px;right:0;height:2px;background:var(--line)}
+.pipeline li:last-child::after{display:none}
+.pipeline li.ai::before{background:var(--cobalt)}.pipeline li.math::before{background:var(--teal)}
+.pipeline p{font-size:15px;color:var(--ink2);margin-top:4px}
+.pipeline .io{font-size:13px;color:var(--muted);margin-top:8px}
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:clamp(20px,3vw,40px);margin-top:20px}
+.vs ul{margin:8px 0 0;padding-left:18px;color:var(--ink2)}
+.vs li{margin:6px 0}
+.how2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:clamp(24px,3.4vw,48px);margin-top:22px}
+.band{border-left:4px solid var(--amber);background:var(--amber-bg);color:#6f3606;padding:11px 14px;font-size:14.5px;border-radius:0 8px 8px 0;margin-bottom:14px}
+.band.real{border-color:var(--teal);background:var(--teal-bg);color:#0a4943}
+.mt th,.mt td{text-align:right}
+.mt th:first-child,.mt td:first-child{text-align:left}
+.mt td{font-size:15.5px;padding:11px 6px 11px 0}
+.mt td:first-child{font-weight:650}
+.cms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:20px}
+.cm{display:grid;grid-template-columns:auto 1fr 1fr;gap:4px;font-size:13px;margin-top:8px}
+.cm span{padding:6px;color:var(--muted);text-align:center;align-self:center}
+.cm b{padding:12px 4px;text-align:center;font-size:24px;font-weight:800;border-radius:6px}
 .cm .good{background:var(--teal-bg);color:var(--teal)}.cm .bad{background:var(--crimson-bg);color:var(--crimson)}
-textarea{width:100%;min-height:150px;border:1px solid var(--rule);border-radius:5px;padding:10px;font:12.5px/1.5 var(--mono);background:var(--card)}
-.standards{columns:2 320px;column-gap:40px;margin-top:18px}
+textarea{width:100%;min-height:150px;border:1px solid var(--line);border-radius:8px;padding:10px;font:12.5px/1.5 var(--mono)}
+.standards{columns:2 320px;column-gap:44px;margin-top:16px}
 .standards div{break-inside:avoid;margin:0 0 18px}
-.standards h3{font:600 17px/1.3 var(--serif);margin:0 0 4px}
-.standards p{margin:0;color:var(--ink2);font-size:15px}
-footer{border-top:1px solid var(--rule);color:var(--muted);font-size:13px;padding:18px 0 28px}
+.standards p{color:var(--ink2);font-size:15.5px;margin-top:3px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-size:13.5px;padding:20px 0 30px}
+[hidden]{display:none!important}
+.tab>h1:first-child{margin-top:18px}
+.vtop{display:flex;justify-content:space-between;margin-bottom:8px;font-size:13.5px;font-weight:700}
+.vtop span:first-child{color:var(--ink2)}.vtop span:last-child{color:var(--teal)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
-@media(max-width:980px){.cases{grid-template-columns:repeat(3,minmax(0,1fr))}.labgrid{grid-template-columns:1fr 1fr}.labgrid .ctrl{grid-column:span 2}}
-@media(max-width:760px){.mast{position:static}.hero,.lower,.ev{grid-template-columns:1fr;gap:24px}.fig-key{border-left:0;padding-left:0;border-top:1px solid var(--rule);padding-top:18px}
- .pair{grid-template-columns:1fr}.cases{grid-template-columns:repeat(2,minmax(0,1fr))}.fields{grid-template-columns:1fr 1fr}
- .steps{grid-template-columns:1fr 1fr}.labgrid{grid-template-columns:1fr}.labgrid .ctrl{grid-column:auto}.cms{grid-template-columns:1fr}.logo span{display:none}nav{margin-left:0}}
+@media(max-width:980px){.hero,.work,.game,.labgrid,.how2{grid-template-columns:1fr}.pipeline{grid-template-columns:1fr 1fr;row-gap:24px}.pipeline li:nth-child(2)::after{display:none}}
+@media(max-width:640px){.top{position:static}.seg{margin-left:0;width:100%}.seg button{flex:1;padding:8px 6px;font-size:13.5px}
+ .strip{grid-template-columns:repeat(9,128px)}.fields{grid-template-columns:1fr 1fr}.flow{grid-template-columns:1fr 1fr;row-gap:8px}
+ .opts{grid-template-columns:1fr}.vs,.cms{grid-template-columns:1fr}.pipeline{grid-template-columns:1fr}.pipeline li::after{display:none}.lead{font-size:17px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
-<header class="mast">
+<header class="top">
   <div class="wrap">
-    <a class="logo" href="#" aria-label="ChartTruth home"><b>Chart<i>Truth</i></b><span>A corrections desk for charts</span></a>
-    <nav role="tablist" aria-label="Sections">
-      <button role="tab" aria-selected="true" data-tab="audit">Audit a chart</button>
+    <a class="logo" href="#audit" aria-label="ChartTruth">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect x="3" y="17" width="6" height="10" rx="1.2" fill="#101418"/><rect x="12" y="11" width="6" height="16" rx="1.2" fill="#101418"/><rect x="21" y="3" width="6" height="24" rx="1.2" fill="none" stroke="#B91C1C" stroke-width="1.6" stroke-dasharray="2.4 2"/><rect x="21" y="9" width="6" height="18" rx="1.2" fill="#1D4ED8"/></svg>
+      ChartTruth</a>
+    <nav class="seg" role="tablist" aria-label="Sections">
+      <button role="tab" aria-selected="true" data-tab="audit">Audit</button>
+      <button role="tab" aria-selected="false" data-tab="game">Spot the lie</button>
       <button role="tab" aria-selected="false" data-tab="lab">Deception lab</button>
-      <button role="tab" aria-selected="false" data-tab="bench">Evidence &amp; standards</button>
+      <button role="tab" aria-selected="false" data-tab="how">How it works</button>
     </nav>
   </div>
 </header>
 
 <main class="wrap">
-<!-- ============ AUDIT ============ -->
-<section class="tab on" id="tab-audit" role="tabpanel">
-  <p class="kicker">Choose a case file, or drop in your own chart</p>
-  <div class="cases" id="cases"></div>
-  <div class="gem">
-    <span class="lbl">Read your chart with Gemini</span>
-    <input type="password" id="apiKey" placeholder="Google AI Studio key (optional)" autocomplete="off" aria-label="Gemini API key">
-    <input id="model" list="models" value="gemini-3.5-flash" aria-label="Gemini model">
-    <datalist id="models"><option value="gemini-3.5-flash"><option value="gemini-3.1-flash-lite"></datalist>
-    <button class="btn" id="analyze" disabled>Read chart</button>
-    <label class="chk"><input type="checkbox" id="remember"> Keep for this tab</label>
-  </div>
-  <p class="status" id="status" role="status"></p>
-
-  <div class="hero" id="hero"></div>
-
-  <div class="pair">
-    <article class="sheet">
-      <header><h3>As published</h3><span class="small" id="origTag">—</span></header>
-      <div class="art" id="origPane"></div>
-    </article>
-    <article class="sheet after">
-      <header><h3>Corrected by ChartTruth</h3><span class="small" id="honestTag">—</span></header>
-      <div class="art" id="honestPane"></div>
-      <label class="chk" id="zeroWrap" style="display:none"><input type="checkbox" id="lineZero"> Draw the line from zero</label>
-    </article>
-  </div>
-
-  <div class="lower">
-    <div>
-      <h2>Findings</h2>
-      <p class="small">Numbers match the red-pen marks on the original. Tags follow the Misviz misleader taxonomy.</p>
-      <ol class="find" id="findings"></ol>
-      <div class="steps" id="pipe"></div>
+<!-- ================= AUDIT ================= -->
+<section class="tab on" id="tab-audit" role="tabpanel" aria-label="Audit a chart">
+  <div class="strip" id="strip" aria-label="Case files"></div>
+  <input type="file" id="file" accept="image/png,image/jpeg,image/webp" hidden>
+  <details class="gem" id="gem"><summary>Read your own chart with Gemini</summary>
+    <div class="gemrow">
+      <input class="in" type="password" id="apiKey" placeholder="Google AI Studio API key" autocomplete="off" aria-label="Gemini API key">
+      <input class="in" id="model" list="models" value="gemini-3.5-flash" aria-label="Gemini model">
+      <datalist id="models"><option value="gemini-3.5-flash"><option value="gemini-3.1-flash-lite"></datalist>
+      <button class="btn" id="analyze" disabled>Read chart</button>
+      <label class="chk"><input type="checkbox" id="remember"> Keep key for this tab</label>
     </div>
+    <p class="hint">Your key stays in this browser tab and goes only to Google’s API. No key? Upload anyway and type the numbers in yourself.</p>
+  </details>
+  <p class="status" id="status" role="status" aria-live="polite"></p>
+
+  <div class="hero">
+    <div id="verdict"></div>
+    <div class="viewer">
+      <div class="vtop" aria-hidden="true"><span>← Published</span><span>Corrected by ChartTruth →</span></div>
+      <div class="wipe" id="wipe" style="--x:50%">
+        <div class="under" id="under"></div>
+        <div class="over" id="over"></div>
+        <div class="handle" id="handle" role="slider" tabindex="0" aria-label="Compare the published chart with the corrected chart" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><span aria-hidden="true">⟷</span></div>
+      </div>
+      <div class="vbar">
+        <span class="hint" style="margin:0">Drag the handle, or use the arrow keys, to compare.</span>
+        <label class="chk" id="zeroWrap" hidden><input type="checkbox" id="lineZero"> Draw the corrected line from zero</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="work">
     <div>
-      <h2>The numbers we read</h2>
-      <p class="small">The AI only transcribes. Check every value; any edit re-runs the math engine at once.</p>
+      <div class="panel">
+        <h2>What’s wrong</h2>
+        <p class="hint">Numbers match the red-pen marks on the chart. Each finding shows the exact calculation behind it.</p>
+        <ol class="find" id="findings"></ol>
+        <div class="flow" id="flow"></div>
+      </div>
+      <div class="panel share">
+        <h2>Share the correction</h2>
+        <div class="sharebox"><div class="row"><b>Honest caption</b><button class="linkbtn" data-copy="caption">Copy</button></div><p id="caption"></p></div>
+        <div class="sharebox"><div class="row"><b>Alt text for screen readers</b><button class="linkbtn" data-copy="alt">Copy</button></div><p id="alt"></p></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button class="btn" id="exportBtn">Download correction card</button><button class="btn ghost" data-copy="json">Copy audit as JSON</button></div>
+        <p class="status" id="shareStatus"></p>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>The numbers the AI read</h2>
+      <p class="hint">The AI only transcribes. Check each value: every edit re-runs the rule engine instantly.</p>
       <div id="editor"></div>
       <details class="raw"><summary>Raw extraction JSON</summary><pre id="raw"></pre></details>
     </div>
   </div>
 </section>
 
-<!-- ============ LAB ============ -->
-<section class="tab" id="tab-lab" role="tabpanel">
-  <p class="kicker">Deception lab</p>
+<!-- ================= GAME ================= -->
+<section class="tab" id="tab-game" role="tabpanel" aria-label="Spot the lie">
+  <h1>Spot the lie</h1>
+  <p class="lead">Eight charts, each made fresh. Some are honest. Pick the trick before the rule engine reveals it. It’s the same engine that audits real charts, so it also marks your answers.</p>
+  <div class="game">
+    <div><div class="gchart" id="gChart"></div></div>
+    <div>
+      <div class="score"><b id="gScore">0</b><span id="gRound">Round 1 of 8</span></div>
+      <div class="prog" id="gProg"></div>
+      <h3 id="gQ" style="margin-bottom:12px">What’s misleading about this chart?</h3>
+      <div class="opts" id="gOpts"></div>
+      <div id="gFb"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= LAB ================= -->
+<section class="tab" id="tab-lab" role="tabpanel" aria-label="Deception lab">
   <h1>Same four numbers. Watch them lie.</h1>
-  <p class="dek">Four stores scored 87, 90, 93 and 96 out of 100. Change only the design and see how far the picture drifts from the data, and how the engine catches each trick.</p>
+  <p class="lead">Four stores scored 87, 90, 93 and 96 out of 100. Change only the design and see how far the picture drifts from the data, and how fast the engine catches it.</p>
   <div class="labgrid">
     <div class="ctrl">
-      <div class="range"><label for="labStart">Y-axis starts at <output id="labStartV">0%</output></label><input type="range" id="labStart" min="0" max="86" value="0"></div>
-      <div class="toggles">
-        <label class="chk"><input type="checkbox" id="lab3d"> Add 3D perspective</label>
-        <label class="chk"><input type="checkbox" id="labInv"> Flip the y-axis</label>
+      <div class="range"><label for="labStart">Axis starts at <output id="labStartV">0%</output></label><input type="range" id="labStart" min="0" max="86" value="0"></div>
+      <div>
+        <label class="chk"><input type="checkbox" id="lab3d"> Add 3D perspective</label><br>
+        <label class="chk"><input type="checkbox" id="labInv"> Flip the axis upside down</label><br>
         <label class="chk"><input type="checkbox" id="labTicks"> Space the ticks unevenly</label>
       </div>
-      <div class="big3">
+      <div class="trio">
         <div><b id="kVis">—</b><small>Store D looks</small></div>
         <div><b id="kData">—</b><small>Store D really is</small></div>
         <div><b id="kLf">—</b><small>Lie factor</small></div>
       </div>
-      <p class="small" style="margin:0">Lie factor = looks ÷ really. Above 1.25 is flagged as misleading.</p>
+      <p class="hint" style="margin:0">Times bigger than Store A. Lie factor = looks ÷ really; above 1.25 is flagged.</p>
+      <div id="labVerdict"></div>
       <button class="btn ghost sm" id="labReset" style="justify-self:start">Reset to honest</button>
     </div>
-    <article class="sheet">
-      <header><h3>What the reader sees</h3><span class="small">with the engine's red pen</span></header>
-      <div class="art stage"><div id="labChart" class="tilt" style="width:100%"></div></div>
-    </article>
-    <article class="sheet after">
-      <header><h3>Verdict</h3></header>
-      <div id="labVerdict"></div>
-      <div id="labHonest" style="margin-top:10px"></div>
-    </article>
+    <div class="stage"><div class="gchart tilt" id="labChart"></div><div id="labHonest" style="margin-top:14px"></div></div>
   </div>
 </section>
 
-<!-- ============ EVIDENCE ============ -->
-<section class="tab" id="tab-bench" role="tabpanel">
-  <p class="kicker">Evidence</p>
-  <h1>Does “read, then reason” beat asking the AI directly?</h1>
-  <p class="dek"><code>eval_misviz.py</code> runs both methods on the same real-world charts from Misviz (UKPLab, 2025): zero-shot Gemini (“is this misleading?”) against ChartTruth (Gemini reads, the rule engine judges).</p>
-  <div class="ev">
+<!-- ================= HOW ================= -->
+<section class="tab" id="tab-how" role="tabpanel" aria-label="How it works">
+  <h1>The AI reads. The math decides.</h1>
+  <p class="lead">Asking a chatbot “is this chart misleading?” gets you an opinion you can’t check. ChartTruth splits the job: a vision model only transcribes, and a small set of published rules makes the call.</p>
+  <ol class="pipeline">
+    <li class="ai"><h3>Gemini reads the chart</h3><p>Turns pixels into strict JSON: chart type, axis range, tick labels, values and visual cues.</p><div class="io">AI step · gives a confidence score</div></li>
+    <li><h3>A person checks it</h3><p>Every number is editable. Below 60% confidence the app refuses to judge until someone verifies.</p><div class="io">Human-in-the-loop</div></li>
+    <li class="math"><h3>Rules make the call</h3><p>Lie factor, tick spacing, slice sums, flipped axes, dual axes, 3D, plus a guardrail for honest zoomed charts.</p><div class="io">Deterministic, same input → same verdict</div></li>
+    <li class="math"><h3>It redraws honestly</h3><p>Zero baseline, even ticks, upright axis, flat 2D, pies rescaled to 100%, with a caption and alt text.</p><div class="io">Output you can share</div></li>
+  </ol>
+  <div class="vs">
+    <div class="panel"><h3>Asking an AI directly</h3><ul><li>Answer changes from run to run</li><li>Can’t show why, beyond a confident paragraph</li><li>Tends to over-flag any axis that isn’t at zero</li><li>Can’t be corrected when it misreads a number</li></ul></div>
+    <div class="panel"><h3>ChartTruth</h3><ul><li>Same numbers always give the same verdict</li><li>Every flag shows its calculation</li><li>Guardrail keeps honest science charts from being flagged</li><li>You fix a misread value and the verdict updates live</li></ul></div>
+  </div>
+
+  <h2 style="margin-top:52px">Evidence</h2>
+  <p class="hint"><code>eval_misviz.py</code> runs both approaches on the same real-world charts from Misviz (UKPLab, 2025).</p>
+  <div class="how2">
     <div id="benchOut"></div>
     <div>
-      <h2>Run it yourself</h2>
       <pre>pip install datasets google-genai pillow
 export HF_TOKEN=...       # accept Misviz terms first
 export GEMINI_API_KEY=...
 python eval_misviz.py --misleading 30 --clean 15 \
   --model gemini-3.5-flash --out results.json</pre>
-      <p class="small">Paste <code>results.json</code> here:</p>
+      <p class="hint" style="margin-top:10px">Paste <code>results.json</code> below.</p>
       <textarea id="benchJson" spellcheck="false" aria-label="Benchmark results JSON"></textarea>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;align-items:center"><button class="btn" id="benchRender">Show results</button><button class="btn ghost" id="benchSample">Sample layout</button><span class="status" id="benchStatus" style="margin:0"></span></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;align-items:center"><button class="btn" id="benchRender">Show results</button><button class="btn ghost" id="benchSample">Sample layout</button></div>
+      <p class="status" id="benchStatus"></p>
     </div>
   </div>
-  <h2 style="margin-top:44px">Standards</h2>
+
+  <h2 style="margin-top:52px">Standards</h2>
   <div class="standards">
-    <div><h3>The AI reads; the math judges.</h3><p>The language model only transcribes numbers and visual cues. Every verdict comes from published, deterministic rules that anyone can check by hand.</p></div>
-    <div><h3>It refuses to guess.</h3><p>Below 60% extraction confidence, or for an unsupported chart type, ChartTruth says “unable to verify” rather than inventing an answer.</p></div>
-    <div><h3>It avoids false accusations.</h3><p>A zoomed axis on a line chart is often legitimate. Science and finance line charts get a neutral context label, not a misleading flag.</p></div>
+    <div><h3>It refuses to guess.</h3><p>Below 60% extraction confidence, or for chart types it doesn’t support, ChartTruth says “unable to verify” instead of inventing an answer.</p></div>
+    <div><h3>It avoids false accusations.</h3><p>Zoomed line charts are often legitimate. Science and finance line charts get a neutral context label, never a misleading flag.</p></div>
     <div><h3>“Misleading” describes the design, not the author.</h3><p>A flag means the visual encoding distorts the numbers. It never claims anyone meant to deceive.</p></div>
-    <div><h3>People stay in control.</h3><p>Every extracted value is editable, and a person can mark the data as verified.</p></div>
-    <div><h3>Nothing leaves your device by default.</h3><p>No backend, no tracking. An image goes to Google’s API only when you add your own key, and the key is never stored beyond this tab.</p></div>
-    <div><h3>What it can’t see.</h3><p>One data series at a time. It doesn’t catch cherry-picked date ranges, misleading captions, missing context or bad source data, and vision models can misread small text. Misviz is mostly English-language web charts.</p></div>
-    <div><h3>About the lie factor.</h3><p>ChartTruth uses the ratio form of Edward Tufte’s idea: how many times bigger the largest bar looks than the smallest, divided by how many times bigger it really is.</p></div>
+    <div><h3>People stay in control.</h3><p>Every extracted value is editable, and a person can mark the data as checked.</p></div>
+    <div><h3>Nothing leaves your device by default.</h3><p>No backend and no tracking. An image goes to Google’s API only when you add your own key, which is kept for this tab at most.</p></div>
+    <div><h3>Accessible by default.</h3><p>Every correction comes with plain-language alt text and an honest caption, and the compare slider works from the keyboard.</p></div>
+    <div><h3>What it can’t see.</h3><p>One data series at a time. It won’t catch cherry-picked date ranges, misleading captions, missing context or bad source data, and vision models can misread small text.</p></div>
+    <div><h3>About the lie factor.</h3><p>This is the ratio form of Edward Tufte’s idea: how many times bigger the largest bar looks than the smallest, divided by how many times bigger it really is.</p></div>
   </div>
 </section>
 </main>
-<footer><div class="wrap">ChartTruth · zero-backend and open source · WAICY 2026 High School AI Showcase · demo charts use illustrative numbers</div></footer>
+<footer><div class="wrap">ChartTruth is open source and runs entirely in your browser. Built for the WAICY 2026 High School AI Showcase. Demo and game charts use illustrative numbers.</div></footer>
 
 <script>
 {
@@ -390,11 +481,15 @@ function audit(s){
 // ================= helpers =================
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const C={cobalt:'#1D4ED8',teal:'#0F766E',amber:'#B45309',crimson:'#B91C1C',ink:'#16181D',muted:'#6E6C66'};
-const HONEST_PAL=['#1D4ED8','#0F766E','#B45309','#6E6C66','#5B3FA8','#0E7490'];
+const C={cobalt:'#1D4ED8',teal:'#0F766E',amber:'#B45309',crimson:'#B91C1C',ink:'#101418',muted:'#6B7483'};
+const HONEST_PAL=['#1D4ED8','#0F766E','#B45309','#6B7483','#5B3FA8','#0E7490'];
 const NEWS_PAL=['#E8590C','#1971C2','#2F9E44','#F08C00','#7048E8','#C2255C'];
 const shade=(hex,f)=>{const n=parseInt(hex.slice(1),16);return '#'+[n>>16,(n>>8)&255,n&255].map(c=>Math.max(0,Math.min(255,Math.round(c*f))).toString(16).padStart(2,'0')).join('');};
 const clip=(t,n)=>{t=String(t);return t.length>n?t.slice(0,n-1)+'…':t;};
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const norm=raw=>Object.assign(normalizeSpec(raw),{series2:Array.isArray(raw&&raw.series2)?raw.series2.map(num):null,series2_label:String((raw&&raw.series2_label)||'')});
+const pts=s=>s.data.filter(d=>Number.isFinite(d.value));
+const pct=v=>Math.round(v*100)+'%';
 
 function niceTicks(lo,hi){
   if(lo===hi) hi=lo+1;
@@ -404,32 +499,51 @@ function niceTicks(lo,hi){
   return out;
 }
 function honestSpec(s,lineZero){
-  const pts=s.data.filter(d=>Number.isFinite(d.value)), vals=pts.map(d=>d.value);
-  const h={...s,is_inverted_y:false,has_3d_effect:false,has_dual_axis:false,data:pts.map(d=>({...d}))};
+  const p=pts(s), vals=p.map(d=>d.value);
+  const h={...s,is_inverted_y:false,has_3d_effect:false,has_dual_axis:false,data:p.map(d=>({...d}))};
   if(s.chart_type==='pie'){const pos=vals.map(v=>Math.max(0,v)),sum=pos.reduce((a,b)=>a+b,0)||1;
-    h.data=pts.map((d,i)=>({label:d.label,value:+(pos[i]/sum*100).toFixed(1)}));h.values_are_percent=true;h.unit='%';}
-  else {const zero=s.chart_type==='bar'||lineZero;
+    h.data=p.map((d,i)=>({label:d.label,value:+(pos[i]/sum*100).toFixed(1)}));h.values_are_percent=true;h.unit='%';}
+  else{const zero=s.chart_type==='bar'||lineZero;
     h.y_ticks=niceTicks(zero?Math.min(0,...vals):Math.min(...vals),zero?Math.max(0,...vals):Math.max(...vals));
     h.y_axis_min=h.y_ticks[0];h.y_axis_max=h.y_ticks[h.y_ticks.length-1];}
   return h;
 }
+// geometric scale used by the renderer: equal pixel spacing between tick labels, linear between them
+function scaleFor(s){
+  const vals=pts(s).map(d=>d.value);
+  const ticks=s.y_ticks.length>=2?[...s.y_ticks].sort((a,b)=>a-b):niceTicks(s.y_axis_min??Math.min(0,...vals),s.y_axis_max??Math.max(...vals));
+  const n=ticks.length;
+  const frac=v=>{let i=0;if(v>=ticks[n-1])i=n-2;else while(i<n-2&&v>ticks[i+1])i++;return (i+(v-ticks[i])/(ticks[i+1]-ticks[i]))/(n-1);};
+  return {ticks,n,frac};
+}
+// how many times taller the biggest bar is DRAWN than the smallest, using the real drawn geometry
+function drawnRatio(s){
+  const p=pts(s); if(s.chart_type!=='bar'||p.length<2) return null;
+  const {ticks,n,frac}=scaleFor(s), zv=(ticks[0]<=0&&ticks[n-1]>=0)?0:ticks[0], f0=frac(zv);
+  const mx=p.reduce((a,b)=>b.value>a.value?b:a), mn=p.reduce((a,b)=>b.value<a.value?b:a);
+  if(mn.value<=0) return null;
+  const hmx=Math.abs(frac(mx.value)-f0), hmn=Math.abs(frac(mn.value)-f0);
+  return {mx,mn,visual:hmn>0?hmx/hmn:Infinity,data:mx.value/mn.value};
+}
 
-// ================= chart renderer (published look, honest look, thumbnails, red-pen notes) =================
+// ================= renderer =================
+const FIX={'truncated axis':'Starts at zero','inverted axis':'Bigger is up again','inconsistent tick intervals':'Even steps between ticks','misrepresentation':'Rescaled to 100%','3D':'Flat, no perspective','dual axis':'One series, one scale','context-dependent zoom':'Same data, clearly labelled','zoomed line axis':'Read with the axis in view'};
 function renderSVG(s,o={}){
-  const honest=o.mode==='honest', thumb=!!o.thumb;
-  const flags=(!honest&&!thumb&&o.res)?o.res.flags:[];
-  const W=560,L=thumb?20:64,R=thumb?16:24,T=thumb?16:(honest?24:58),PH=thumb?300:250,B=thumb?16:46+(flags.length?flags.length*28+8:0);
+  const honest=o.mode==='honest', thumb=!!o.thumb, res=o.res;
+  const flags=(!thumb&&res)?res.flags:[];
+  const rows=thumb?0:(o.rows??flags.length);
+  const dual=!honest&&s.has_dual_axis&&Array.isArray(s.series2)&&s.series2.some(Number.isFinite);
+  const W=560,L=thumb?18:64,R=thumb?16:(dual?60:24),T=thumb?14:58,PH=thumb?300:250,B=thumb?14:46+(rows?rows*28+8:0);
   const H=T+PH+B,pw=W-L-R,ph=PH;
-  const F=honest?'font-family="Instrument Sans,system-ui,sans-serif"':'font-family="Arial,Helvetica,sans-serif"';
-  const MONO='font-family="JetBrains Mono,ui-monospace,monospace"', HAND='font-family="Caveat,Segoe Print,cursive"';
-  const pts=s.data.filter(d=>Number.isFinite(d.value)), vals=pts.map(d=>d.value), u=s.unit||'';
-  let o2=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(s.title)}">`;
-  if(!honest) o2+=`<rect width="${W}" height="${H}" fill="#F6F5F0"/>`;
-  if(!thumb&&!honest) o2+=`<text x="${W/2}" y="32" text-anchor="middle" ${F} font-size="18" font-weight="700" fill="#111">${esc(clip(s.title,52))}</text>`;
-  if(!pts.length) return o2+'</svg>';
+  const F='font-family="Arial,Helvetica,sans-serif"', HF='font-family="Schibsted Grotesk,system-ui,sans-serif"', PEN='font-family="Caveat,Segoe Print,cursive"';
+  const p=pts(s), vals=p.map(d=>d.value), u=s.unit||'';
+  let out=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc((honest?'Corrected: ':'Published: ')+s.title)}">`;
+  out+=`<rect width="${W}" height="${H}" fill="${honest?'#FFFFFF':'#F6F5F0'}"/>`;
+  if(!thumb) out+=`<text x="${W/2}" y="32" text-anchor="middle" ${honest?HF:F} font-size="18" font-weight="700" fill="#111">${esc(clip(s.title,50))}</text>`;
+  if(!p.length) return out+(o.empty?`<text x="${W/2}" y="${T+ph/2}" text-anchor="middle" ${HF} font-size="16" fill="#6B7483">${esc(o.empty)}</text>`:'')+'</svg>';
   const notes=[];
   const addNote=(sev,text)=>{notes.push({sev,text});return notes.length;};
-  const mark=(x,y,n,sev)=>`<circle cx="${x}" cy="${y}" r="10" fill="${sev==='high'?C.crimson:C.amber}"/><text x="${x}" y="${y+4}" text-anchor="middle" ${MONO} font-size="11" font-weight="700" fill="#fff">${n}</text>`;
+  const mark=(x,y,n,sev)=>`<circle cx="${x}" cy="${y}" r="10" fill="${sev==='high'?C.crimson:C.amber}"/><text x="${x}" y="${y+4.2}" text-anchor="middle" ${HF} font-size="12" font-weight="800" fill="#fff">${n}</text>`;
   const pen=sev=>sev==='high'?C.crimson:C.amber;
   let body='';
   if(s.chart_type==='pie'){
@@ -437,141 +551,201 @@ function renderSVG(s,o={}){
     const PAL=honest?HONEST_PAL:NEWS_PAL, pv=vals.map(v=>Math.max(0,v)), tot=pv.reduce((a,b)=>a+b,0)||1;
     const P=(a,dy=0)=>`${(cx+r*Math.cos(a)).toFixed(2)},${(cy+r*k*Math.sin(a)+dy).toFixed(2)}`;
     let a=s.has_3d_effect?0.25:-Math.PI/2;
-    const sl=pv.map((v,i)=>{const a0=a;a+=v/tot*2*Math.PI;return{a0,a1:a,col:PAL[i%PAL.length],d:pts[i]};});
+    const sl=pv.map((v,i)=>{const a0=a;a+=v/tot*2*Math.PI;return{a0,a1:a,col:PAL[i%PAL.length],d:p[i]};});
     if(depth) sl.forEach(q=>[[0,Math.PI],[2*Math.PI,3*Math.PI]].forEach(([f0,f1])=>{const s0=Math.max(q.a0,f0),s1=Math.min(q.a1,f1);
       if(s1>s0) body+=`<path d="M${P(s0)} A${r},${r*k} 0 0 1 ${P(s1)} L${P(s1,depth)} A${r},${r*k} 0 0 0 ${P(s0,depth)} Z" fill="${shade(q.col,.68)}"/>`;}));
     sl.forEach((q,i)=>{const lg=(q.a1-q.a0)>Math.PI?1:0, full=(q.a1-q.a0)>=2*Math.PI-1e-6;
       body+=full?`<ellipse cx="${cx}" cy="${cy}" rx="${r}" ry="${r*k}" fill="${q.col}"/>`:`<path d="M${cx},${cy} L${P(q.a0)} A${r},${r*k} 0 ${lg} 1 ${P(q.a1)} Z" fill="${q.col}" stroke="${honest?'#fff':'#F6F5F0'}" stroke-width="2"/>`;
       if(thumb) return;
       const m=(q.a0+q.a1)/2;
-      if(q.a1-q.a0>0.3) body+=`<text x="${cx+r*.62*Math.cos(m)}" y="${cy+r*k*.62*Math.sin(m)+5}" text-anchor="middle" ${honest?MONO:F} font-size="14" font-weight="700" fill="#fff">${esc(fmt(q.d.value,1))}${s.values_are_percent?'%':''}</text>`;
-      body+=`<rect x="352" y="${T+40+i*28}" width="14" height="14" rx="2" fill="${q.col}"/><text x="374" y="${T+52+i*28}" ${F} font-size="14" fill="#222">${esc(clip(q.d.label,18))}${honest?` <tspan ${MONO} fill="#6E6C66">${esc(fmt(q.d.value,1))}%</tspan>`:''}</text>`;});
-    flags.forEach(f=>{const n=addNote(f.sev,f.tag==='misrepresentation'?`${vals.map(v=>fmt(v,1)).join(' + ')} = ${fmt(vals.reduce((a,b)=>a+b,0),1)}%, not 100%`:f.tag==='3D'?'3D tilt inflates the front slice':f.text.split('.')[0]);
-      if(f.tag==='misrepresentation') body+=mark(cx+r+6,cy-r*k-4,n,f.sev);
-      if(f.tag==='3D') body+=mark(cx,cy+r*k+depth+14,n,f.sev);});
+      if(q.a1-q.a0>0.3) body+=`<text x="${cx+r*.62*Math.cos(m)}" y="${cy+r*k*.62*Math.sin(m)+5}" text-anchor="middle" ${honest?HF:F} font-size="14.5" font-weight="700" fill="#fff">${esc(fmt(q.d.value,1))}${s.values_are_percent?'%':''}</text>`;
+      body+=`<rect x="352" y="${T+40+i*28}" width="14" height="14" rx="3" fill="${q.col}"/><text x="374" y="${T+52+i*28}" ${honest?HF:F} font-size="14" fill="#222">${esc(clip(q.d.label,18))}${honest?` <tspan fill="#6B7483">${esc(fmt(q.d.value,1))}%</tspan>`:''}</text>`;});
+    flags.forEach(f=>{
+      const n=addNote(f.sev,f.tag==='misrepresentation'?`${vals.map(v=>fmt(v,1)).join(' + ')} = ${fmt(vals.reduce((a,b)=>a+b,0),1)}%, not 100%`:f.tag==='3D'?'3D tilt inflates the front slice':f.tag==='dual axis'?'Two scales on one chart':clip(f.text.split('.')[0],44));
+      if(f.tag==='misrepresentation') body+=mark(cx+r+8,cy-r*k-2,n,f.sev);
+      else if(f.tag==='3D') body+=mark(cx,cy+r*k+depth+14,n,f.sev);});
   } else {
-    let ticks=s.y_ticks.length>=2?[...s.y_ticks].sort((a,b)=>a-b):niceTicks(s.y_axis_min??Math.min(0,...vals),s.y_axis_max??Math.max(...vals));
-    const n=ticks.length;
-    const frac=v=>{let i=0;if(v>=ticks[n-1])i=n-2;else while(i<n-2&&v>ticks[i+1])i++;
-      return Math.max(-0.01,Math.min(1.04,(i+(v-ticks[i])/(ticks[i+1]-ticks[i]))/(n-1)));};
+    const {ticks,n,frac:fr}=scaleFor(s);
+    const frac=v=>Math.max(-0.01,Math.min(1.04,fr(v)));
     const yP=v=>s.is_inverted_y?T+frac(v)*ph:T+ph-frac(v)*ph;
     const tickY=i=>s.is_inverted_y?T+ph*i/(n-1):T+ph-ph*i/(n-1);
     ticks.forEach((t,i)=>{const y=tickY(i);
-      body+=`<line x1="${L}" x2="${L+pw}" y1="${y}" y2="${y}" stroke="${honest?'#ECE9E2':'#DEDDD6'}"/>`;
-      if(!thumb) body+=`<text x="${L-9}" y="${y+4}" text-anchor="end" ${honest?MONO:F} font-size="${honest?11.5:12}" fill="#5c5b57">${esc(fmt(t,2))}${esc(u)}</text>`;});
-    const zeroV=(ticks[0]<=0&&ticks[n-1]>=0)?0:ticks[0], base=yP(zeroV), band=pw/pts.length;
+      body+=`<line x1="${L}" x2="${L+pw}" y1="${y}" y2="${y}" stroke="${honest?'#E8ECF1':'#DEDDD6'}"/>`;
+      if(!thumb) body+=`<text x="${L-9}" y="${y+4}" text-anchor="end" ${honest?HF:F} font-size="12" fill="#5c6270">${esc(fmt(t,2))}${esc(u)}</text>`;});
+    const zeroV=(ticks[0]<=0&&ticks[n-1]>=0)?0:ticks[0], base=yP(zeroV), band=pw/p.length;
     if(s.chart_type==='bar'){
       const bw=band*(thumb?0.6:0.56),dx=s.has_3d_effect?13:0,dy=s.has_3d_effect?-9:0;
-      pts.forEach((d,i)=>{const col=honest?C.cobalt:NEWS_PAL[i%NEWS_PAL.length],x=L+i*band+(band-bw)/2,y=yP(d.value),top=Math.min(y,base),h=Math.abs(base-y);
-        if(dx){body+=`<polygon points="${x+bw},${top} ${x+bw+dx},${top+dy} ${x+bw+dx},${top+h+dy} ${x+bw},${top+h}" fill="${shade(col,.7)}"/><polygon points="${x},${top} ${x+dx},${top+dy} ${x+bw+dx},${top+dy} ${x+bw},${top}" fill="${shade(col,1.25)}"/>`;}
-        body+=`<rect x="${x}" y="${top}" width="${bw}" height="${Math.max(h,0.5)}" fill="${col}"/>`;
+      p.forEach((d,i)=>{const col=honest?C.cobalt:NEWS_PAL[i%NEWS_PAL.length],x=L+i*band+(band-bw)/2,y=yP(d.value),top=Math.min(y,base),h=Math.abs(base-y);
+        if(dx) body+=`<polygon points="${x+bw},${top} ${x+bw+dx},${top+dy} ${x+bw+dx},${top+h+dy} ${x+bw},${top+h}" fill="${shade(col,.7)}"/><polygon points="${x},${top} ${x+dx},${top+dy} ${x+bw+dx},${top+dy} ${x+bw},${top}" fill="${shade(col,1.25)}"/>`;
+        body+=`<rect x="${x}" y="${top}" width="${bw}" height="${Math.max(h,0.5)}" fill="${col}" ${honest?'rx="2"':''}/>`;
         if(thumb) return;
         const ly=s.is_inverted_y?top+h+17:top-8+dy;
-        body+=`<text x="${x+bw/2}" y="${ly}" text-anchor="middle" ${honest?MONO:F} font-size="13" font-weight="700" fill="#222">${esc(fmt(d.value,2))}${esc(u)}</text>`;
-        body+=`<text x="${x+bw/2}" y="${T+ph+22}" text-anchor="middle" ${F} font-size="12.5" fill="#333">${esc(clip(d.label,16))}</text>`;});
+        body+=`<text x="${x+bw/2}" y="${ly}" text-anchor="middle" ${honest?HF:F} font-size="13.5" font-weight="700" fill="#1b1f24">${esc(fmt(d.value,2))}${esc(u)}</text>`;
+        body+=`<text x="${x+bw/2}" y="${T+ph+22}" text-anchor="middle" ${honest?HF:F} font-size="12.5" fill="#333">${esc(clip(d.label,16))}</text>`;});
     } else {
       const col=honest?C.cobalt:(s.is_inverted_y?'#8f1d1d':'#1971C2');
-      const xy=pts.map((d,i)=>[L+band*(i+.5),yP(d.value)]);
+      const xy=p.map((d,i)=>[L+band*(i+.5),yP(d.value)]);
       const area=honest?(o.lineZero?.10:0):(s.is_inverted_y?.85:.13);
-      if(area) body+=`<polygon points="${xy[0][0]},${base} ${xy.map(p=>p.join(',')).join(' ')} ${xy[xy.length-1][0]},${base}" fill="${s.is_inverted_y&&!honest?'#c92a2a':col}" fill-opacity="${area}"/>`;
-      body+=`<polyline points="${xy.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${col}" stroke-width="${thumb?5:2.5}" stroke-linejoin="round"/>`;
-      if(!thumb) xy.forEach((p,i)=>{body+=`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#fff" stroke="${col}" stroke-width="2"/>`;
-        if(pts.length<=10||i%2===0) body+=`<text x="${p[0]}" y="${T+ph+22}" text-anchor="middle" ${F} font-size="12" fill="#333">${esc(clip(pts[i].label,10))}</text>`;});
+      if(area) body+=`<polygon points="${xy[0][0]},${base} ${xy.map(q=>q.join(',')).join(' ')} ${xy[xy.length-1][0]},${base}" fill="${s.is_inverted_y&&!honest?'#c92a2a':col}" fill-opacity="${area}"/>`;
+      if(dual){
+        const v2=s.series2.slice(0,p.length).map(v=>Number.isFinite(v)?v:0), t2=niceTicks(0,Math.max(...v2)), m2=t2[t2.length-1]||1;
+        t2.forEach((t,i)=>{if(!thumb) body+=`<text x="${L+pw+8}" y="${T+ph-ph*(t/m2)+4}" ${F} font-size="12" fill="#c2410c">${esc(fmt(t,1))}</text>`;});
+        const xy2=v2.map((v,i)=>[L+band*(i+.5),T+ph-ph*(v/m2)]);
+        body+=`<polyline points="${xy2.map(q=>q.join(',')).join(' ')}" fill="none" stroke="#EA580C" stroke-width="${thumb?5:2.5}" stroke-dasharray="${thumb?'':'0'}"/>`;
+        if(!thumb) body+=`<text x="${L+pw-4}" y="${T+14}" text-anchor="end" ${F} font-size="12.5" font-weight="700" fill="#c2410c">${esc(clip(s.series2_label||'Series 2',26))} →</text><text x="${L+6}" y="${T+14}" ${F} font-size="12.5" font-weight="700" fill="#1971C2">← ${esc(clip(s.title.split(' vs ')[0],26))}</text>`;
+      }
+      body+=`<polyline points="${xy.map(q=>q.join(',')).join(' ')}" fill="none" stroke="${col}" stroke-width="${thumb?5:2.6}" stroke-linejoin="round"/>`;
+      if(!thumb) xy.forEach((q,i)=>{body+=`<circle cx="${q[0]}" cy="${q[1]}" r="3.6" fill="#fff" stroke="${col}" stroke-width="2"/>`;
+        if(p.length<=10||i%2===0) body+=`<text x="${q[0]}" y="${T+ph+22}" text-anchor="middle" ${honest?HF:F} font-size="12" fill="#333">${esc(clip(p[i].label,10))}</text>`;});
     }
-    if(honest&&!thumb) body+=`<line x1="${L}" x2="${L+pw}" y1="${base}" y2="${base}" stroke="#16181D" stroke-width="1.5"/>`;
+    if(honest&&!thumb) body+=`<line x1="${L}" x2="${L+pw}" y1="${base}" y2="${base}" stroke="#101418" stroke-width="1.5"/>`;
     else if(!thumb) body+=`<line x1="${L}" x2="${L}" y1="${T}" y2="${T+ph}" stroke="#9a9890"/>`;
-    // red pen
     flags.forEach(f=>{
       if(f.tag==='truncated axis'||f.tag==='context-dependent zoom'||f.tag==='zoomed line axis'){
         const y0=tickY(0), n2=addNote(f.sev,f.tag==='truncated axis'?(f.sev==='high'?`Axis starts at ${fmt(s.y_axis_min)}${u}, not zero`:'Axis cut, but only a small distortion'):f.tag==='context-dependent zoom'?`Zoomed to ${fmt(s.y_axis_min)}${u}: normal for ${s.domain}`:`Zoomed to ${fmt(s.y_axis_min)}${u}: check the real change`);
-        body+=`<ellipse cx="${L-28}" cy="${y0}" rx="31" ry="14" fill="none" stroke="${pen(f.sev)}" stroke-width="2.2" transform="rotate(-6 ${L-28} ${y0})"/>`+mark(L+14,y0+(s.is_inverted_y?16:-16),n2,f.sev);
+        body+=`<ellipse cx="${L-28}" cy="${y0}" rx="31" ry="14" fill="none" stroke="${pen(f.sev)}" stroke-width="2.3" transform="rotate(-6 ${L-28} ${y0})"/>`+mark(L+14,y0+(s.is_inverted_y?16:-16),n2,f.sev);
       } else if(f.tag==='inverted axis'){
         const n2=addNote(f.sev,'Axis flipped: bigger numbers sit lower');
-        body+=`<path d="M${L-52},${T+12} L${L-52},${T+ph-12}" stroke="${C.crimson}" stroke-width="2.4" fill="none"/><path d="M${L-59},${T+ph-24} L${L-52},${T+ph-10} L${L-45},${T+ph-24}" stroke="${C.crimson}" stroke-width="2.4" fill="none"/>`+mark(L-52,T+ph/2,n2,f.sev);
+        body+=`<path d="M${L-52},${T+12} L${L-52},${T+ph-12}" stroke="${C.crimson}" stroke-width="2.5" fill="none"/><path d="M${L-59},${T+ph-24} L${L-52},${T+ph-10} L${L-45},${T+ph-24}" stroke="${C.crimson}" stroke-width="2.5" fill="none"/>`+mark(L-52,T+ph/2,n2,f.sev);
       } else if(f.tag==='inconsistent tick intervals'){
         const n2=addNote(f.sev,'Evenly spaced ticks, uneven steps');
-        body+=`<rect x="${L-58}" y="${T-12}" width="54" height="${ph+24}" rx="20" fill="none" stroke="${C.crimson}" stroke-width="2.2" stroke-dasharray="7 5"/>`+mark(L-58,T+ph*0.3,n2,f.sev);
-      } else if(f.tag==='3D'){
-        const n2=addNote(f.sev,'3D depth distorts bar heights'); body+=mark(L+pw-14,T+10,n2,f.sev);
-      } else if(f.tag==='dual axis'){
-        const n2=addNote(f.sev,'Two scales on one chart'); body+=mark(L+pw-38,T+10,n2,f.sev);
-      }
+        body+=`<rect x="${L-58}" y="${T-12}" width="54" height="${ph+24}" rx="20" fill="none" stroke="${C.crimson}" stroke-width="2.3" stroke-dasharray="7 5"/>`+mark(L-58,T+ph*0.3,n2,f.sev);
+      } else if(f.tag==='3D'){const n2=addNote(f.sev,'3D depth distorts bar heights'); body+=mark(L+pw-14,T+12,n2,f.sev);}
+      else if(f.tag==='dual axis'){const n2=addNote(f.sev,'Two scales: the lines can be made to match'); body+=mark(L+pw-136,T+10,n2,f.sev);}
     });
   }
   const ny=T+ph+(s.chart_type==='pie'?30:52);
-  notes.forEach((q,i)=>{const y=ny+i*28;
-    body+=mark(L+2,y-6,i+1,q.sev)+`<text x="${L+20}" y="${y}" ${HAND} font-size="23" font-weight="600" fill="${pen(q.sev)}">${esc(q.text)}</text>`;});
-  return o2+body+'</svg>';
+  if(!honest) notes.forEach((q,i)=>{const y=ny+i*28; body+=mark(L+2,y-6,i+1,q.sev)+`<text x="${L+20}" y="${y}" ${PEN} font-size="23" font-weight="600" fill="${pen(q.sev)}">${esc(q.text)}</text>`;});
+  else (o.fixes||[]).forEach((t,i)=>{const y=ny+i*28,cx=W-R-8; body+=`<circle cx="${cx}" cy="${y-6}" r="10" fill="${C.teal}"/><path d="M${cx-5},${y-6} l4,4 l6,-8" stroke="#fff" stroke-width="2.2" fill="none"/><text x="${cx-18}" y="${y}" text-anchor="end" ${PEN} font-size="23" font-weight="600" fill="${C.teal}">${esc(t)}</text>`;});
+  return out+body+'</svg>';
 }
 
 // ================= cases =================
 const DEMOS=[
- {id:'trunc',name:'Truncated bar',blurb:'94% vs 98%, axis from 92%',spec:{chart_type:'bar',title:'Customer satisfaction: Brand A vs Brand B',domain:'general',y_axis_min:92,y_axis_max:99,y_ticks:[92,93,94,95,96,97,98,99],is_inverted_y:false,has_3d_effect:false,has_dual_axis:false,values_are_percent:true,unit:'%',data:[{label:'Brand A',value:94},{label:'Brand B',value:98}],confidence:0.96,notes:'Pre-extracted demo JSON. Value axis begins at 92%.'}},
- {id:'inv',name:'Inverted line',blurb:'A rise drawn as a fall',spec:{chart_type:'line',title:'Reported incidents per year after the 2005 law',domain:'policy',y_axis_min:0,y_axis_max:1000,y_ticks:[0,200,400,600,800,1000],is_inverted_y:true,has_3d_effect:false,has_dual_axis:false,values_are_percent:false,unit:'',data:[{label:'2000',value:520},{label:'2002',value:540},{label:'2004',value:560},{label:'2006',value:690},{label:'2008',value:760},{label:'2010',value:800},{label:'2012',value:830}],confidence:0.9,notes:'Pre-extracted demo JSON. Illustrative numbers, inspired by a widely shared 2014 news graphic. Values increase downward.'}},
- {id:'pie',name:'Broken 3D pie',blurb:'Slices sum to 132%',spec:{chart_type:'pie',title:'Which candidate do voters back?',domain:'policy',y_axis_min:null,y_axis_max:null,y_ticks:[],is_inverted_y:false,has_3d_effect:true,has_dual_axis:false,values_are_percent:true,unit:'%',data:[{label:'Candidate A',value:48},{label:'Candidate B',value:41},{label:'Candidate C',value:43}],confidence:0.94,notes:'Pre-extracted demo JSON. Illustrative poll numbers (respondents could pick more than one).'}},
- {id:'sci',name:'Honest science line',blurb:'Temperature, 14.0–15.2 °C',spec:{chart_type:'line',title:'Global mean surface temperature',domain:'science',y_axis_min:14.0,y_axis_max:15.2,y_ticks:[14.0,14.2,14.4,14.6,14.8,15.0,15.2],is_inverted_y:false,has_3d_effect:false,has_dual_axis:false,values_are_percent:false,unit:'°C',data:[{label:'1960',value:14.03},{label:'1970',value:14.03},{label:'1980',value:14.26},{label:'1990',value:14.45},{label:'2000',value:14.39},{label:'2010',value:14.72},{label:'2020',value:15.02},{label:'2023',value:15.17}],confidence:0.93,notes:'Pre-extracted demo JSON. Approximate values: 14 °C baseline plus NASA GISTEMP-style anomalies.'}}
+ {id:'trunc',name:'Truncated bar',spec:{chart_type:'bar',title:'Customer satisfaction: Brand A vs Brand B',domain:'general',y_axis_min:92,y_axis_max:99,y_ticks:[92,93,94,95,96,97,98,99],is_inverted_y:false,has_3d_effect:false,has_dual_axis:false,values_are_percent:true,unit:'%',data:[{label:'Brand A',value:94},{label:'Brand B',value:98}],confidence:0.96,notes:'Pre-read demo. Value axis begins at 92%.'}},
+ {id:'inv',name:'Upside-down line',spec:{chart_type:'line',title:'Reported incidents per year after the 2005 law',domain:'policy',y_axis_min:0,y_axis_max:1000,y_ticks:[0,200,400,600,800,1000],is_inverted_y:true,has_3d_effect:false,has_dual_axis:false,values_are_percent:false,unit:'',data:[{label:'2000',value:520},{label:'2002',value:540},{label:'2004',value:560},{label:'2006',value:690},{label:'2008',value:760},{label:'2010',value:800},{label:'2012',value:830}],confidence:0.9,notes:'Pre-read demo with illustrative numbers, inspired by a widely shared 2014 news graphic. Values increase downward.'}},
+ {id:'pie',name:'Pie over 100%',spec:{chart_type:'pie',title:'Which candidate do voters back?',domain:'policy',y_axis_min:null,y_axis_max:null,y_ticks:[],is_inverted_y:false,has_3d_effect:true,has_dual_axis:false,values_are_percent:true,unit:'%',data:[{label:'Candidate A',value:48},{label:'Candidate B',value:41},{label:'Candidate C',value:43}],confidence:0.94,notes:'Pre-read demo with illustrative poll numbers (respondents could pick more than one).'}},
+ {id:'ticks',name:'Uneven scale',spec:{chart_type:'bar',title:'App downloads by month (thousands)',domain:'general',y_axis_min:0,y_axis_max:200,y_ticks:[0,10,20,50,100,200],is_inverted_y:false,has_3d_effect:false,has_dual_axis:false,values_are_percent:false,unit:'',data:[{label:'Jan',value:8},{label:'Feb',value:15},{label:'Mar',value:40},{label:'Apr',value:90},{label:'May',value:180}],confidence:0.92,notes:'Pre-read demo. Tick labels jump 10, 10, 30, 50, 100 but sit evenly apart.'}},
+ {id:'dual',name:'Dual axis',spec:{chart_type:'line',title:'Ice cream sales vs drownings',domain:'general',y_axis_min:0,y_axis_max:500,y_ticks:[0,100,200,300,400,500],is_inverted_y:false,has_3d_effect:false,has_dual_axis:true,values_are_percent:false,unit:'',data:[{label:'Apr',value:120},{label:'May',value:210},{label:'Jun',value:340},{label:'Jul',value:460},{label:'Aug',value:430},{label:'Sep',value:250}],series2:[14,19,26,33,31,21],series2_label:'Drownings',confidence:0.9,notes:'Pre-read demo with illustrative numbers. Second series uses its own right-hand axis; only the first series is audited.'}},
+ {id:'bar3d',name:'3D bars',spec:{chart_type:'bar',title:'Phone market share',domain:'finance',y_axis_min:0,y_axis_max:40,y_ticks:[0,10,20,30,40],is_inverted_y:false,has_3d_effect:true,has_dual_axis:false,values_are_percent:true,unit:'%',data:[{label:'Brand X',value:31},{label:'Brand Y',value:27},{label:'Brand Z',value:18},{label:'Others',value:24}],confidence:0.88,notes:'Pre-read demo. Bars drawn with depth.'}},
+ {id:'sci',name:'Honest zoom',spec:{chart_type:'line',title:'Global mean surface temperature',domain:'science',y_axis_min:14.0,y_axis_max:15.2,y_ticks:[14.0,14.2,14.4,14.6,14.8,15.0,15.2],is_inverted_y:false,has_3d_effect:false,has_dual_axis:false,values_are_percent:false,unit:'°C',data:[{label:'1960',value:14.03},{label:'1970',value:14.03},{label:'1980',value:14.26},{label:'1990',value:14.45},{label:'2000',value:14.39},{label:'2010',value:14.72},{label:'2020',value:15.02},{label:'2023',value:15.17}],confidence:0.93,notes:'Pre-read demo. Approximate values: 14 °C baseline plus NASA GISTEMP-style anomalies.'}},
+ {id:'clean',name:'Honest bar',spec:{chart_type:'bar',title:'Students who passed, by class',domain:'general',y_axis_min:0,y_axis_max:30,y_ticks:[0,5,10,15,20,25,30],is_inverted_y:false,has_3d_effect:false,has_dual_axis:false,values_are_percent:false,unit:'',data:[{label:'9A',value:24},{label:'9B',value:19},{label:'9C',value:27}],confidence:0.97,notes:'Pre-read demo. A clean chart, to show ChartTruth doesn’t flag everything.'}}
 ];
+const VCOL={misleading:C.crimson,context:C.amber,honest:C.teal,unverifiable:C.muted};
 
 // ================= verdict copy =================
-const STAMP={honest:'HONEST',context:'CONTEXT-DEPENDENT',misleading:'MISLEADING',unverifiable:'UNVERIFIED'};
+const VLABEL={misleading:'Misleading',context:'Context-dependent',honest:'Honest',unverifiable:'Unable to verify'};
 function headline(s,res){
   if(res.verdict==='unverifiable') return 'We can’t read this chart reliably enough to judge it.';
-  const t=new Set(res.flags.filter(f=>f.sev==='high').map(f=>f.tag)), pts=s.data.filter(d=>Number.isFinite(d.value));
+  const t=new Set(res.flags.filter(f=>f.sev==='high').map(f=>f.tag)), p=pts(s);
   if(t.has('truncated axis')){
     if(res.lieFactor===Infinity) return 'A cut-off axis makes a bar disappear.';
-    const mx=pts.reduce((a,b)=>b.value>a.value?b:a), mn=pts.reduce((a,b)=>b.value<a.value?b:a);
+    const mx=p.reduce((a,b)=>b.value>a.value?b:a), mn=p.reduce((a,b)=>b.value<a.value?b:a);
     return `${mx.label||'The top bar'} looks ${fmt(res.visualRatio,1)}× bigger than ${mn.label||'the bottom bar'}. It’s really ${fmt(res.dataRatio,2)}×.`;
   }
-  if(t.has('inverted axis')){const up=pts[pts.length-1].value>=pts[0].value; return `The numbers go ${up?'up':'down'}. The picture shows them going ${up?'down':'up'}.`;}
-  if(t.has('misrepresentation')) return `${pts.length} slices that add up to ${fmt(pts.reduce((a,d)=>a+d.value,0),1)}% of one whole.`;
-  if(t.has('inconsistent tick intervals')) return 'An uneven scale stretches part of the chart.';
-  if(t.has('dual axis')) return 'Two scales on one chart can make any link look real.';
+  if(t.has('inverted axis')){const up=p[p.length-1].value>=p[0].value;return `The numbers go ${up?'up':'down'}. The picture shows them going ${up?'down':'up'}.`;}
+  if(t.has('misrepresentation')) return `${p.length} slices that add up to ${fmt(p.reduce((a,d)=>a+d.value,0),1)}% of one whole.`;
+  if(t.has('inconsistent tick intervals')){const g=drawnRatio(s); if(g&&Number.isFinite(g.visual)) return `${g.mx.label} looks ${fmt(g.visual,1)}× bigger than ${g.mn.label}. It’s really ${fmt(g.data,1)}×.`; return 'An uneven scale stretches part of the chart.';}
+  if(t.has('dual axis')) return 'Two scales on one chart can make any two lines look linked.';
   if(t.has('3D')) return '3D perspective bends the sizes out of true.';
   if(res.guardrail) return 'A zoomed axis, used honestly to show a small but real change.';
   if(res.verdict==='context') return 'Fair enough, as long as you read the axis.';
   return 'The picture matches the numbers.';
 }
 function keyFigure(s,res){
-  const pts=s.data.filter(d=>Number.isFinite(d.value)), u=s.unit||'';
-  if(res.verdict==='unverifiable') return {num:Math.round((s.human_verified?1:s.confidence)*100)+'%',cap:'Extraction confidence',sub:'Needs at least 60%, or a human check.'};
-  if(res.lieFactor!==null) return {num:fmt(res.lieFactor),cap:'Lie factor',sub:res.lieFactor>1.25?'Above the 1.25 limit.':'Within the 1.25 limit.',ratio:res};
-  if(s.chart_type==='pie'){const sum=pts.reduce((a,d)=>a+d.value,0);return {num:fmt(sum,1)+(s.values_are_percent?'%':''),cap:'Sum of the slices',sub:s.values_are_percent?'A whole is 100%.':'Raw values, shown as shares.'};}
-  return {num:fmt(s.y_axis_min??0,2)+u,cap:'Where the axis starts',sub:s.is_inverted_y?'And it runs upside down.':(s.y_axis_min>0?'Not zero: a zoomed view.':'From zero.')};
+  const p=pts(s), u=s.unit||'';
+  if(res.verdict==='unverifiable') return {num:pct(s.human_verified?1:s.confidence),cap:'Extraction confidence',sub:'Needs 60% or a human check.'};
+  const ticksFlag=res.flags.some(f=>f.tag==='inconsistent tick intervals');
+  if(ticksFlag){const g=drawnRatio(s); if(g&&Number.isFinite(g.visual)) return {num:fmt(g.visual/g.data,2),cap:'Lie factor of the drawn scale',sub:g.visual<g.data?'Below 1: big differences get squashed.':'Above 1: differences get stretched.',ratio:{visualRatio:g.visual,dataRatio:g.data}};}
+  if(res.lieFactor!==null) return {num:fmt(res.lieFactor),cap:'Lie factor',sub:res.lieFactor>1.25?'Over the 1.25 limit.':'Within the 1.25 limit.',ratio:res};
+  if(s.chart_type==='pie'){const sum=p.reduce((a,d)=>a+d.value,0);return {num:fmt(sum,1)+(s.values_are_percent?'%':''),cap:'Sum of the slices',sub:s.values_are_percent?'A whole is 100%.':'Raw values, shown as shares.'};}
+  if(s.has_dual_axis) return {num:'2',cap:'Value scales on one chart',sub:'Their alignment is arbitrary.'};
+  return {num:fmt(s.y_axis_min??0,2)+u,cap:'Axis starts at',sub:s.is_inverted_y?'And it runs upside down.':(s.y_axis_min>0?'A zoomed view, not zero.':'Zero, as it should.')};
+}
+function mathTrace(f,s,res){
+  const p=pts(s), v=p.map(d=>d.value), mx=Math.max(...v), mn=Math.min(...v), y=s.y_axis_min;
+  switch(f.tag){
+    case 'truncated axis': return res.lieFactor===Infinity?`smallest value ${fmt(mn)} ≤ axis start ${fmt(y)}\n→ a bar is erased: lie factor = ∞`:
+      `looks  = (${fmt(mx)} − ${fmt(y)}) ÷ (${fmt(mn)} − ${fmt(y)}) = ${fmt(res.visualRatio,3)}\nreally = ${fmt(mx)} ÷ ${fmt(mn)} = ${fmt(res.dataRatio,3)}\nlie factor = ${fmt(res.visualRatio,3)} ÷ ${fmt(res.dataRatio,3)} = ${fmt(res.lieFactor,3)}  ${res.lieFactor>1.25?'> 1.25 → flag':'≤ 1.25 → note only'}`;
+    case 'inconsistent tick intervals':{const t=s.y_ticks,g=[];for(let i=1;i<t.length;i++) g.push(Math.abs(t[i]-t[i-1]));
+      const d=[];for(let i=1;i<g.length;i++){const m=Math.max(g[i],g[i-1]);d.push(m?Math.abs(g[i]-g[i-1])/m:0);}
+      return `ticks = ${t.map(x=>fmt(x)).join(', ')}\nsteps = ${g.map(x=>fmt(x)).join(', ')}\nchange between steps = ${d.map(x=>Math.round(x*100)+'%').join(', ')}\nlargest = ${Math.round(Math.max(...d)*100)}% > 5% → flag`;}
+    case 'misrepresentation':{const sum=v.reduce((a,b)=>a+b,0);return v.some(x=>x<0)?`negative slice found: ${v.filter(x=>x<0).map(x=>fmt(x)).join(', ')} → flag`:`${v.map(x=>fmt(x,1)).join(' + ')} = ${fmt(sum,1)}\n${fmt(sum,1)} is outside [99, 101] → flag`;}
+    case 'context-dependent zoom': return `chart_type = line, domain = ${s.domain}\naxis starts at ${fmt(y)} > 0, no other issues\n→ guardrail: context-dependent, not misleading`;
+    case 'zoomed line axis': return `chart_type = line, domain = ${s.domain}\naxis starts at ${fmt(y)} > 0\nline charts don't need zero → context note`;
+    case 'inverted axis': return `vision cue is_inverted_y = true\n(check it: do bigger tick labels sit lower?) → flag`;
+    case 'dual axis': return `vision cue has_dual_axis = true\ntwo independent y-scales → flag`;
+    case '3D': return `vision cue has_3d_effect = true\nperspective breaks length/area encoding → flag`;
+    default: return '';
+  }
+}
+function caption(s,res){
+  const p=pts(s), u=s.unit||'';
+  if(res.verdict==='unverifiable'||!p.length) return 'Verify the numbers first; ChartTruth won’t write a caption for data it couldn’t check.';
+  const v=x=>fmt(x,2)+u;
+  if(s.chart_type==='pie'){const sum=p.reduce((a,d)=>a+Math.max(0,d.value),0)||1;
+    const sh=p.map(d=>`${d.label} ${Math.round(Math.max(0,d.value)/sum*100)}%`).join(', ');
+    return s.values_are_percent&&Math.abs(sum-100)>1?`The figures add up to ${fmt(sum,1)}%, so they can’t be shares of one group. As shares of the total: ${sh}.`:`Shares of the total: ${sh}.`;}
+  if(s.chart_type==='line'){const a=p[0],b=p[p.length-1],ch=b.value-a.value,pc=a.value?ch/Math.abs(a.value)*100:null;
+    return `${s.title}: ${ch>=0?'rose':'fell'} from ${v(a.value)} (${a.label}) to ${v(b.value)} (${b.label}), a change of ${ch>=0?'+':''}${fmt(ch,2)}${u}${pc!==null?` (${ch>=0?'+':''}${fmt(pc,1)}%)`:''}.`;}
+  const mx=p.reduce((a,b)=>b.value>a.value?b:a), mn=p.reduce((a,b)=>b.value<a.value?b:a);
+  return `${s.title}: ${mx.label} is highest at ${v(mx.value)}, ${mn.label} lowest at ${v(mn.value)}. The gap is ${fmt(mx.value-mn.value,2)}${u==='%'?' percentage points':u} (${fmt(mx.value/mn.value,2)}×).`;
+}
+function altText(s,res,lineZero){
+  const p=pts(s), u=s.unit||'';
+  if(res.verdict==='unverifiable'||!p.length) return 'No corrected chart yet.';
+  const kind={bar:'Bar chart',line:'Line chart',pie:'Pie chart'}[s.chart_type];
+  if(s.chart_type==='pie'){const sum=p.reduce((a,d)=>a+Math.max(0,d.value),0)||1;return `${kind}, “${s.title}”, flat, with ${p.length} slices rescaled to 100%: ${p.map(d=>`${d.label} ${fmt(Math.max(0,d.value)/sum*100,1)}%`).join('; ')}.`;}
+  const items=p.map(d=>`${d.label} ${fmt(d.value,2)}${u}`).join('; ');
+  return `${kind}, “${s.title}”, upright axis ${s.chart_type==='bar'||lineZero?'starting at zero':`zoomed from ${fmt(Math.min(...p.map(d=>d.value)),2)}${u}`}, evenly spaced ticks. Values: ${items}.`;
 }
 
-// ================= state & audit view =================
-const state={spec:null,raw:null,lineZero:false,pipe:['wait',''],upload:null,current:null};
+// ================= audit view =================
+const state={spec:null,raw:null,lineZero:false,pipe:['wait',''],current:null,upload:null,res:null,x:50};
+let uploadSpec=null;
 function setStatus(m,c=''){const e=$('#status');e.textContent=m;e.className='status '+c;}
-function setPipe(st){$('#pipe').innerHTML=st.map(([b,[c,sm]])=>`<div class="${c}"><b>${esc(b)}</b>${esc(sm)}</div>`).join('');}
-function heroHTML(s,res){
-  const k=keyFigure(s,res), v=res.verdict;
-  const stamp=res.guardrail&&v==='context'?'CONTEXT-DEPENDENT ZOOM · NEUTRAL':STAMP[v];
-  let ratio='';
-  if(k.ratio&&Number.isFinite(k.ratio.visualRatio)){const mx=Math.max(k.ratio.visualRatio,k.ratio.dataRatio);
-    ratio=`<div class="ratio"><div><span>Looks like</span><i style="width:${k.ratio.visualRatio/mx*100}%;background:var(--crimson)"></i><span>${fmt(k.ratio.visualRatio,2)}×</span></div><div><span>Really is</span><i style="width:${k.ratio.dataRatio/mx*100}%;background:var(--teal)"></i><span>${fmt(k.ratio.dataRatio,2)}×</span></div></div>`;}
-  const lead=v==='unverifiable'?res.reason:(res.flags[0]?res.flags[0].text:'Baseline, scale direction, tick spacing and structure all check out.');
-  return `<div><span class="stamp s-${v}">${stamp}</span><h1>${esc(headline(s,res))}</h1><p class="dek">${esc(lead)}</p></div>
-  <div class="fig-key"><div class="num ${v}">${esc(k.num)}</div><div class="cap">${esc(k.cap)}</div><div class="sub">${esc(k.sub)}</div>${ratio}</div>`;
+function setX(x,anim){
+  x=Math.max(0,Math.min(100,x)); state.x=x;
+  $('#wipe').style.setProperty('--x',x+'%'); $('#handle').setAttribute('aria-valuenow',Math.round(x));
+  $('#handle').setAttribute('aria-valuetext',x<15?'Showing the published chart':x>85?'Showing the corrected chart':'Split view');
 }
-function findingsHTML(res){
-  if(res.verdict==='unverifiable') return `<li class="unv"><div><span class="tagline">refused</span>${esc(res.reason)}</div></li>`;
-  if(!res.flags.length) return `<li class="ok"><div><span class="tagline">no misleaders</span>Zero or labelled baseline, upright scale, even ticks, flat 2D, parts that add up.</div></li>`;
-  return res.flags.map(f=>`<li class="${f.sev==='high'?'':'context'}"><div><span class="tagline">${esc(f.tag)} · ${f.sev==='high'?'distortion':'context'}</span>${esc(f.text)}</div></li>`).join('');
+let animId=0;
+function sweep(){ if(reduced){setX(50);return;} const id=++animId,t0=performance.now();
+  const step=t=>{if(id!==animId) return; const k=Math.min(1,(t-t0)/1100), e=1-Math.pow(1-k,3); setX(100-50*e); if(k<1) requestAnimationFrame(step);};
+  setX(100); requestAnimationFrame(step);}
+function verdictHTML(s,res){
+  const k=keyFigure(s,res), v=res.verdict;
+  const label=res.guardrail&&v==='context'?'Context-dependent zoom (neutral)':VLABEL[v];
+  let bars='';
+  if(k.ratio&&Number.isFinite(k.ratio.visualRatio)){const m=Math.max(k.ratio.visualRatio,k.ratio.dataRatio);
+    bars=`<div class="bars" aria-label="Looks ${fmt(k.ratio.visualRatio,2)} times, really ${fmt(k.ratio.dataRatio,2)} times"><div><span>Looks like</span><i style="width:${k.ratio.visualRatio/m*100}%;background:var(--crimson)"></i><span>${fmt(k.ratio.visualRatio,2)}×</span></div><div><span>Really is</span><i style="width:${k.ratio.dataRatio/m*100}%;background:var(--teal)"></i><span>${fmt(k.ratio.dataRatio,2)}×</span></div></div>`;}
+  const lead=v==='unverifiable'?res.reason:(res.flags[0]?res.flags[0].text:'Baseline, scale direction, tick spacing and structure all check out.');
+  return `<span class="pill v-${v}"><i></i>${esc(label)}</span><h1>${esc(headline(s,res))}</h1><p class="lead">${esc(lead)}</p>
+   <div class="key"><div class="num ${v}">${esc(k.num)}</div><div><div class="cap">${esc(k.cap)}</div><div class="sub">${esc(k.sub)}</div></div>${bars}</div>`;
+}
+function findingsHTML(s,res){
+  if(res.verdict==='unverifiable') return `<li class="unv"><div><span class="ftag">Refused to judge</span>${esc(res.reason)}<details class="math"><summary></summary><div class="calc">confidence = ${fmt(s.human_verified?1:s.confidence,2)} &lt; 0.60 → refuse</div></details></div></li>`;
+  if(!res.flags.length) return `<li class="ok"><div><span class="ftag">No misleaders found</span>Zero baseline, upright scale, even ticks, flat 2D and parts that add up.</div></li>`;
+  return res.flags.map(f=>`<li class="${f.sev==='high'?'':'context'}"><div><span class="ftag">${esc(f.tag[0].toUpperCase()+f.tag.slice(1))} <em>${f.sev==='high'?'distortion':'context only'}</em></span>${esc(f.text)}<details class="math"><summary></summary><div class="calc">${esc(mathTrace(f,s,res))}</div></details></div></li>`).join('');
 }
 function runAudit(){
   const s=state.spec; if(!s) return;
-  const res=audit(s);
-  $('#hero').innerHTML=heroHTML(s,res);
-  $('#findings').innerHTML=findingsHTML(res);
-  if(state.current==='upload') $('#origPane').innerHTML=`<img src="${state.upload}" alt="Your uploaded chart">`;
-  else $('#origPane').innerHTML=renderSVG(s,{res});
-  $('#zeroWrap').style.display=s.chart_type==='line'&&res.verdict!=='unverifiable'?'':'none';
+  const res=audit(s); state.res=res;
+  $('#verdict').innerHTML=verdictHTML(s,res);
+  $('#findings').innerHTML=findingsHTML(s,res);
+  const ok=res.verdict!=='unverifiable'&&s.chart_type!=='other'&&pts(s).length>0;
+  const rows=state.current==='upload'?0:res.flags.length;
+  const fixes=ok?[...new Set(res.flags.map(f=>f.tag==='context-dependent zoom'&&state.lineZero?'Shown from zero for scale':FIX[f.tag]).filter(Boolean))]:[];
+  const under=ok?renderSVG(honestSpec(s,state.lineZero),{mode:'honest',lineZero:state.lineZero,rows:Math.max(rows,fixes.length),fixes}):renderSVG({...s,data:[]},{mode:'honest',rows,empty:'No correction until the numbers are verified'});
+  $('#under').innerHTML=under;
+  $('#over').innerHTML=state.current==='upload'?`<img src="${state.upload}" alt="Your uploaded chart">`:renderSVG(s,{res,rows:Math.max(rows,fixes.length)});
+  $('#zeroWrap').hidden=!(s.chart_type==='line'&&ok);
   $('#lineZero').checked=state.lineZero;
-  const ok=res.verdict!=='unverifiable'&&s.chart_type!=='other'&&s.data.some(d=>Number.isFinite(d.value));
-  $('#honestPane').innerHTML=ok?renderSVG(honestSpec(s,state.lineZero),{mode:'honest',lineZero:state.lineZero}):`<p class="empty">No correction drawn: ChartTruth won’t redraw numbers it couldn’t verify.</p>`;
-  $('#honestTag').textContent=!ok?'withheld':s.chart_type==='pie'?'rescaled to 100%, flat':s.chart_type==='line'?(state.lineZero?'from zero, upright':'upright, even ticks'):'zero baseline, even ticks, flat';
+  $('#caption').textContent=caption(s,res);
+  $('#alt').textContent=altText(s,res,state.lineZero);
   $('#raw').textContent=JSON.stringify(state.raw??s,null,2);
-  setPipe([['Vision read',state.pipe],['Human check',s.human_verified?['done','Verified by a person']:['done','Editable']],['Rule engine',['done',`${res.flags.length} rule${res.flags.length===1?'':'s'} fired`]],['Correction',ok?['done','Drawn']:['wait','Withheld']]]);
+  const steps=[['Vision read',state.pipe],['Human check',s.human_verified?['done','Checked by a person']:['done','Editable']],['Rules',['done',`${res.flags.length} rule${res.flags.length===1?'':'s'} fired`]],['Redraw',ok?['done','Corrected']:['wait','Withheld']]];
+  $('#flow').innerHTML=steps.map(([b,[c,sm]])=>`<div class="${c}"><b>${esc(b)}</b>${esc(sm)}</div>`).join('');
 }
 const opt=(l,v)=>l.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('');
 function renderEditor(){
@@ -584,17 +758,17 @@ function renderEditor(){
     <label class="w2">Tick labels, bottom to top<input data-k="y_ticks" value="${esc(s.y_ticks.join(', '))}"></label>
     <label>AI confidence<input data-k="confidence" type="number" min="0" max="1" step="0.05" value="${s.confidence}"></label>
     <label>Unit<input data-k="unit" value="${esc(s.unit)}" placeholder="%, °C, $"></label>
-    <label class="w2" style="grid-column:1/-1">Title<input data-k="title" value="${esc(s.title)}"></label></div>
-  <div class="flags">
-    <label class="chk"><input type="checkbox" data-k="is_inverted_y" ${s.is_inverted_y?'checked':''}> Flipped axis</label>
+    <label class="w4">Title<input data-k="title" value="${esc(s.title)}"></label></div>
+  <div class="cues">
+    <label class="chk"><input type="checkbox" data-k="is_inverted_y" ${s.is_inverted_y?'checked':''}> Axis upside down</label>
     <label class="chk"><input type="checkbox" data-k="has_3d_effect" ${s.has_3d_effect?'checked':''}> 3D effect</label>
     <label class="chk"><input type="checkbox" data-k="has_dual_axis" ${s.has_dual_axis?'checked':''}> Two axes</label>
     <label class="chk"><input type="checkbox" data-k="values_are_percent" ${s.values_are_percent?'checked':''}> Values are %</label>
     <label class="chk"><input type="checkbox" data-k="human_verified" ${s.human_verified?'checked':''}> <b>I checked these values</b></label></div>
-  <table><thead><tr><th style="width:62%">Label</th><th style="text-align:right">Value</th><th></th></tr></thead><tbody>
-  ${s.data.map((d,i)=>`<tr><td><input data-row="${i}" data-f="label" value="${esc(d.label)}" aria-label="Label ${i+1}"></td><td class="n"><input data-row="${i}" data-f="value" type="number" step="any" inputmode="decimal" value="${d.value??''}" aria-label="Value ${i+1}"></td><td><button class="x" data-del="${i}" aria-label="Remove row ${i+1}">×</button></td></tr>`).join('')||'<tr><td colspan="3" class="small" style="padding:14px 0">No values yet. Add rows by hand, or read the chart with Gemini.</td></tr>'}
+  <table><thead><tr><th style="width:62%">Label</th><th style="text-align:right">Value</th><th><span class="sr">Remove</span></th></tr></thead><tbody>
+  ${s.data.map((d,i)=>`<tr><td><input data-row="${i}" data-f="label" value="${esc(d.label)}" aria-label="Label ${i+1}"></td><td class="n"><input data-row="${i}" data-f="value" type="number" step="any" inputmode="decimal" value="${d.value??''}" aria-label="Value ${i+1}"></td><td><button class="x" data-del="${i}" aria-label="Remove row ${i+1}">×</button></td></tr>`).join('')||'<tr><td colspan="3" class="hint" style="padding:14px 0">No values yet. Add rows yourself, or read the chart with Gemini.</td></tr>'}
   </tbody></table><button class="btn ghost sm" id="addRow" style="margin-top:10px">Add a row</button>
-  ${s.notes?`<p class="small" style="margin:10px 0 0">Reader’s note: ${esc(s.notes)}</p>`:''}`;
+  ${s.notes?`<p class="hint" style="margin-top:10px">Reader’s note: ${esc(s.notes)}</p>`:''}`;
 }
 function onEdit(e){
   const t=e.target,s=state.spec; if(!s||!t.matches('input,select')) return;
@@ -609,38 +783,74 @@ function onEdit(e){
 $('#editor').addEventListener('input',onEdit);
 $('#editor').addEventListener('change',e=>{if(e.target.type==='checkbox'||e.target.tagName==='SELECT') onEdit(e);});
 $('#editor').addEventListener('click',e=>{const s=state.spec;if(!s) return;
-  const del=e.target.closest('[data-del]'); if(del){s.data.splice(+del.dataset.del,1);renderEditor();runAudit();}
+  const d=e.target.closest('[data-del]'); if(d){s.data.splice(+d.dataset.del,1);renderEditor();runAudit();}
   if(e.target.id==='addRow'){s.data.push({label:`Item ${s.data.length+1}`,value:0});renderEditor();runAudit();}});
 $('#lineZero').addEventListener('change',e=>{state.lineZero=e.target.checked;runAudit();});
 
-function loadSpec(raw,pipe,current,tag){
-  state.raw=raw; state.spec=normalizeSpec(raw); state.pipe=pipe; state.current=current;
+function loadSpec(raw,pipe,current){
+  state.raw=raw; state.spec=norm(raw); state.pipe=pipe; state.current=current;
   state.lineZero=!(state.spec.domain==='science'||state.spec.domain==='finance');
-  $('#origTag').textContent=tag;
   document.querySelectorAll('.case').forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===current));
-  renderEditor(); runAudit();
+  renderEditor(); runAudit(); sweep();
 }
-function loadDemo(id){const d=DEMOS.find(x=>x.id===id); loadSpec(JSON.parse(JSON.stringify(d.spec)),['done','Pre-read (works offline)'],id,'illustrative case'); setStatus('');}
-function renderCases(){
-  $('#cases').innerHTML=DEMOS.map(d=>`<button class="case" data-id="${d.id}" aria-pressed="false"><span class="th">${renderSVG(normalizeSpec(d.spec),{thumb:true})}</span><b>${esc(d.name)}</b><small>${esc(d.blurb)}</small></button>`).join('')
-   +`<button class="case drop" data-id="upload" id="drop" aria-pressed="false"><span class="th" id="dropTh">+</span><b>Your chart</b><small>Drop or choose a PNG / JPG</small></button><input type="file" id="file" accept="image/png,image/jpeg,image/webp" hidden>`;
+function loadDemo(id){const d=DEMOS.find(x=>x.id===id); loadSpec(JSON.parse(JSON.stringify(d.spec)),['done','Pre-read, works offline'],id); setStatus('');}
+function renderStrip(){
+  $('#strip').innerHTML=DEMOS.map(d=>{const s=norm(d.spec),r=audit(s);return `<button class="case" data-id="${d.id}" aria-pressed="false"><span class="th">${renderSVG(s,{thumb:true})}</span><b><span class="dot" style="background:${VCOL[r.verdict]}" aria-hidden="true"></span>${esc(d.name)}</b></button>`;}).join('')
+   +`<button class="case up" data-id="upload" id="drop" aria-pressed="false"><span class="th" id="dropTh">+</span><b>Your chart</b></button>`;
 }
-renderCases();
-$('#cases').addEventListener('click',e=>{const b=e.target.closest('.case'); if(!b) return; if(b.dataset.id==='upload'){ if(state.upload&&state.current!=='upload'){loadUploadState();} else $('#file').click(); } else loadDemo(b.dataset.id);});
+renderStrip();
+$('#strip').addEventListener('click',e=>{const b=e.target.closest('.case'); if(!b) return;
+  if(b.dataset.id==='upload'){ if(state.upload&&state.current!=='upload') loadUpload(); else $('#file').click(); } else loadDemo(b.dataset.id);});
+
+// wipe interaction
+{const w=$('#wipe'); let drag=false;
+ const at=e=>{const r=w.getBoundingClientRect(); animId++; setX((e.clientX-r.left)/r.width*100);};
+ w.addEventListener('pointerdown',e=>{drag=true;w.setPointerCapture(e.pointerId);at(e);});
+ w.addEventListener('pointermove',e=>{if(drag) at(e);});
+ ['pointerup','pointercancel'].forEach(ev=>w.addEventListener(ev,()=>drag=false));
+ $('#handle').addEventListener('keydown',e=>{const m={ArrowLeft:-5,ArrowRight:5,PageDown:-20,PageUp:20}; animId++;
+   if(e.key in m){e.preventDefault();setX(state.x+m[e.key]);} else if(e.key==='Home'){e.preventDefault();setX(0);} else if(e.key==='End'){e.preventDefault();setX(100);}});}
+
+// share
+function flash(m,c='ok'){const e=$('#shareStatus');e.textContent=m;e.className='status '+c;}
+async function copyText(t){try{await navigator.clipboard.writeText(t);flash('Copied.');}catch(e){flash('Copy was blocked here. Select the text and copy it by hand.','err');}}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-copy]'); if(!b) return;
+  const k=b.dataset.copy; if(k==='caption') copyText($('#caption').textContent); else if(k==='alt') copyText($('#alt').textContent);
+  else if(k==='json') copyText(JSON.stringify({input:state.spec,verdict:state.res.verdict,lie_factor:state.res.lieFactor,flags:state.res.flags,caption:$('#caption').textContent,alt_text:$('#alt').textContent},null,2));});
+function wrapText(t,max){const w=t.split(' '),l=[];let c='';w.forEach(x=>{if((c+' '+x).trim().length>max){l.push(c.trim());c=x;}else c+=' '+x;});if(c.trim()) l.push(c.trim());return l;}
+$('#exportBtn').addEventListener('click',()=>{
+  const s=state.spec,res=state.res; if(!s) return;
+  const nest=(svg,x,y,w)=>svg.replace('<svg ',`<svg x="${x}" y="${y}" width="${w}" `);
+  const W=1200,H=760, col=VCOL[res.verdict];
+  const pub=state.current==='upload'?`<image href="${state.upload}" x="40" y="250" width="540" height="420" preserveAspectRatio="xMidYMid meet"/>`:nest(renderSVG(s,{res}),40,250,540);
+  const ok=res.verdict!=='unverifiable'&&pts(s).length;
+  const hon=ok?nest(renderSVG(honestSpec(s,state.lineZero),{mode:'honest',lineZero:state.lineZero}),620,250,540):'';
+  const lines=wrapText(headline(s,res),52);
+  let svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="#fff"/>
+   <rect x="40" y="40" rx="16" width="${VLABEL[res.verdict].length*11+44}" height="32" fill="${col}"/><text x="62" y="62" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="700" fill="#fff">${esc(VLABEL[res.verdict])}</text>
+   ${lines.map((l,i)=>`<text x="40" y="${118+i*48}" font-family="Arial,Helvetica,sans-serif" font-size="40" font-weight="800" fill="#101418">${esc(l)}</text>`).join('')}
+   <text x="40" y="236" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#465061">Published</text><text x="620" y="236" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#0F766E">Corrected by ChartTruth</text>
+   ${pub}${hon}<text x="40" y="${H-24}" font-family="Arial,Helvetica,sans-serif" font-size="15" fill="#6B7483">ChartTruth: hybrid AI + deterministic chart auditor${res.lieFactor!==null&&Number.isFinite(res.lieFactor)?`  ·  Lie factor ${fmt(res.lieFactor)}`:''}</text></svg>`;
+  const img=new Image();
+  img.onload=()=>{try{const c=document.createElement('canvas');c.width=W*2;c.height=H*2;const g=c.getContext('2d');g.scale(2,2);g.drawImage(img,0,0);
+    c.toBlob(b=>{if(!b){flash('Could not create the image.','err');return;}const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`charttruth-${(s.title||'chart').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40)}.png`;document.body.appendChild(a);a.click();a.remove();
+      flash('Card downloaded. (If nothing appeared, this preview blocks downloads; use the GitHub Pages copy.)');},'image/png');}catch(e){flash('Could not create the image here: '+e.message,'err');}};
+  img.onerror=()=>flash('Could not create the image.','err');
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+});
 
 // ================= upload + Gemini =================
-let uploadSpec=null;
-function loadUploadState(){loadSpec(uploadSpec||{chart_type:'bar',title:'Your chart',data:[],confidence:0},uploadSpec&&uploadSpec.__read?['done','Read by Gemini']:['wait','Waiting for Gemini or you'],'upload','your upload');}
+function loadUpload(){loadSpec(uploadSpec,uploadSpec.__read?['done','Read by Gemini']:['wait','Waiting for Gemini or you'],'upload');}
 function readFile(f){
-  if(!f||!/^image\/(png|jpeg|webp)$/.test(f.type)){setStatus('Please choose a PNG, JPG or WebP image.','err');return;}
+  if(!f||!/^image\/(png|jpeg|webp)$/.test(f.type)){setStatus('Choose a PNG, JPG or WebP image.','err');return;}
   const fr=new FileReader();
   fr.onload=()=>{const img=new Image();img.onload=()=>{
     const sc=Math.min(1,1600/Math.max(img.width,img.height)); let url=fr.result;
     if(sc<1){const c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);c.getContext('2d').drawImage(img,0,0,c.width,c.height);url=c.toDataURL('image/png');}
     state.upload=url; $('#dropTh').innerHTML=`<img src="${url}" alt="">`;
     uploadSpec={chart_type:'bar',title:f.name.replace(/\.[^.]+$/,''),domain:'general',data:[],confidence:0,notes:'Not read yet. Add a Gemini key and press “Read chart”, or type the values yourself and tick “I checked these values”.'};
-    loadUploadState(); updateAnalyze();
-    if($('#apiKey').value.trim()) analyze(); else setStatus('Image loaded. Add a Gemini key to read it, or enter the numbers yourself below.');
+    loadUpload(); updateAnalyze(); $('#gem').open=true;
+    if($('#apiKey').value.trim()) analyze(); else setStatus('Image loaded. Add a Gemini key to read it, or type the numbers in below.');
   };img.onerror=()=>setStatus('That image could not be opened.','err');img.src=fr.result;};
   fr.readAsDataURL(f);
 }
@@ -662,37 +872,83 @@ async function analyze(){
     const text=parts.filter(p=>p.text&&!p.thought).map(p=>p.text).join('');
     if(!text) throw new Error('The model returned no text (it may have been blocked).');
     const raw=parseJSONLoose(text); uploadSpec={...raw,__read:true};
-    loadSpec(raw,['done',`${model}, ${Math.round(normalizeSpec(raw).confidence*100)}% sure`],'upload','your upload');
+    loadSpec(raw,['done',`${model}, ${pct(normalizeSpec(raw).confidence)} sure`],'upload');
     setStatus('Read complete. Check the numbers below; every edit re-runs the audit.','ok');
   }catch(err){
     const blocked=err instanceof TypeError;
-    setStatus((blocked?'Couldn’t reach Gemini. This preview host blocks outside requests, or you’re offline. Open the GitHub Pages copy to use Gemini.':'Gemini error: '+err.message)+' You can still type the values below.','err');
+    setStatus((blocked?'Couldn’t reach Gemini. This preview host blocks outside requests, or you’re offline. Use the GitHub Pages copy.':'Gemini error: '+err.message)+' You can still type the values below.','err');
     state.pipe=['err','Read failed']; runAudit();
   }finally{updateAnalyze();}
 }
-const drop=()=>$('#drop');
-$('#cases').addEventListener('change',e=>{if(e.target.id==='file') readFile(e.target.files[0]);});
-['dragenter','dragover'].forEach(ev=>$('#cases').addEventListener(ev,e=>{if(e.target.closest('#drop')){e.preventDefault();drop().classList.add('over');}}));
-['dragleave','drop'].forEach(ev=>$('#cases').addEventListener(ev,e=>{if(e.target.closest('#drop')){e.preventDefault();drop().classList.remove('over');if(ev==='drop') readFile(e.dataTransfer.files[0]);}}));
+$('#file').addEventListener('change',e=>readFile(e.target.files[0]));
+['dragenter','dragover'].forEach(ev=>$('#strip').addEventListener(ev,e=>{if(e.target.closest('#drop')){e.preventDefault();$('#drop').classList.add('over');}}));
+['dragleave','drop'].forEach(ev=>$('#strip').addEventListener(ev,e=>{if(e.target.closest('#drop')){e.preventDefault();$('#drop').classList.remove('over');if(ev==='drop') readFile(e.dataTransfer.files[0]);}}));
 $('#analyze').addEventListener('click',analyze);
 $('#apiKey').addEventListener('input',()=>{updateAnalyze();if($('#remember').checked) try{sessionStorage.setItem('ct_key',$('#apiKey').value);}catch(e){}});
 $('#remember').addEventListener('change',e=>{try{e.target.checked?sessionStorage.setItem('ct_key',$('#apiKey').value):sessionStorage.removeItem('ct_key');}catch(x){}});
 try{const k=sessionStorage.getItem('ct_key');if(k){$('#apiKey').value=k;$('#remember').checked=true;}}catch(e){}
 
+// ================= game =================
+const R=(a,b)=>a+Math.floor(Math.random()*(b-a+1)), pick=a=>a[Math.floor(Math.random()*a.length)];
+const GOPTS=[['trunc','Cut-off axis'],['inv','Upside-down axis'],['ticks','Uneven scale'],['pie','Slices don’t add up'],['3d','3D distortion'],['honest','Nothing, it’s honest']];
+const TAGKIND={'truncated axis':'trunc','inverted axis':'inv','inconsistent tick intervals':'ticks','misrepresentation':'pie','3D':'3d'};
+function makeRound(kind){
+  const b0={domain:'general',has_dual_axis:false,is_inverted_y:false,has_3d_effect:false,confidence:1,human_verified:true,unit:'',values_are_percent:false};
+  if(kind==='trunc'){const names=pick([['North','South','East'],['2022','2023','2024'],['Team A','Team B','Team C'],['Lake','Hill','Park']]);
+    const b=R(55,85), vals=[b,b+R(1,3),b+R(4,7)].sort(()=>Math.random()-.5), lo=b-R(1,3), hi=Math.max(...vals)+1, t=[]; for(let v=lo;v<=hi;v++) t.push(v);
+    return {...b0,chart_type:'bar',title:pick(['Voter turnout by district','Exam pass rate','Customer rating by team','Recycling rate by school']),unit:'%',values_are_percent:true,y_axis_min:lo,y_axis_max:hi,y_ticks:t,data:names.map((l,i)=>({label:l,value:vals[i]}))};}
+  if(kind==='inv'){let v=R(150,400);const up=Math.random()<.6,d=[];for(let y=2016;y<=2023;y++){d.push({label:String(y),value:v});v=Math.max(10,v+(up?1:-1)*R(10,60));}
+    const t=niceTicks(0,Math.max(...d.map(x=>x.value)));return {...b0,chart_type:'line',title:pick(['Bike thefts reported','Hospital visits for asthma','Library visitors (thousands)','Traffic accidents in the city']),y_axis_min:0,y_axis_max:t[t.length-1],y_ticks:t,is_inverted_y:true,data:d};}
+  if(kind==='ticks'){const v=[R(5,9),R(12,19),R(30,45),R(70,95),R(150,190)];return {...b0,chart_type:'bar',title:pick(['Followers by month (thousands)','Solar panels installed','Cases reported per week']),y_axis_min:0,y_axis_max:200,y_ticks:[0,10,20,50,100,200],data:['Jan','Feb','Mar','Apr','May'].map((l,i)=>({label:l,value:v[i]}))};}
+  if(kind==='pie'){const n=R(3,4),target=R(115,140),raw=Array.from({length:n},()=>R(10,40)),sm=raw.reduce((a,b)=>a+b,0);const v=raw.map(x=>Math.round(x/sm*target));
+    return {...b0,chart_type:'pie',title:pick(['Favourite school subject','How students get to school','Which snack should the canteen sell?']),values_are_percent:true,unit:'%',data:v.map((x,i)=>({label:['Option A','Option B','Option C','Option D'][i],value:x}))};}
+  if(kind==='3d'){const a=R(35,50),b=R(20,30);return {...b0,chart_type:'pie',title:pick(['Energy mix of the town','Club budget by activity','Time spent online by app']),has_3d_effect:true,values_are_percent:true,unit:'%',data:[{label:'Part A',value:a},{label:'Part B',value:b},{label:'Part C',value:100-a-b}]};}
+  const names=pick([['Mon','Tue','Wed','Thu'],['8A','8B','8C'],['Red','Blue','Green','Gold']]), v=names.map(()=>R(12,60)), t=niceTicks(0,Math.max(...v));
+  return {...b0,chart_type:'bar',title:pick(['Books borrowed per day','Votes for class captain','Points by house']),y_axis_min:0,y_axis_max:t[t.length-1],y_ticks:t,data:names.map((l,i)=>({label:l,value:v[i]}))};
+}
+function answerOf(s){const r=audit(s); if(r.verdict==='honest') return 'honest'; const f=r.flags.find(x=>x.sev==='high'); return f?TAGKIND[f.tag]:'honest';}
+const game={rounds:[],i:0,score:0,res:[]};
+function newGame(){const kinds=['trunc','inv','ticks','pie','3d','honest',pick(['trunc','ticks','inv']),pick(['honest','pie','3d'])].sort(()=>Math.random()-.5);
+  game.rounds=kinds.map(k=>norm(makeRound(k))); game.i=0; game.score=0; game.res=[]; showRound();}
+function gProg(){$('#gProg').innerHTML=game.rounds.map((_,i)=>`<i class="${game.res[i]===true?'hit':game.res[i]===false?'miss':i===game.i?'now':''}"></i>`).join('');}
+function showRound(){
+  const s=game.rounds[game.i];
+  $('#gChart').innerHTML=renderSVG(s,{rows:2});
+  $('#gScore').textContent=game.score; $('#gRound').textContent=`Round ${game.i+1} of ${game.rounds.length}`; gProg();
+  $('#gQ').textContent='What’s misleading about this chart?';
+  $('#gOpts').innerHTML=GOPTS.map(([k,l])=>`<button class="opt" data-k="${k}">${l}</button>`).join(''); $('#gFb').innerHTML='';
+}
+$('#gOpts').addEventListener('click',e=>{const b=e.target.closest('.opt'); if(!b||b.disabled) return;
+  const s=game.rounds[game.i], r=audit(s), ans=answerOf(s), ok=b.dataset.k===ans;
+  if(ok) game.score++; game.res[game.i]=ok;
+  document.querySelectorAll('.opt').forEach(o=>{o.disabled=true; if(o.dataset.k===ans) o.classList.add('right'); else if(o===b) o.classList.add('wrong');});
+  $('#gChart').innerHTML=renderSVG(s,{res:r,rows:2});
+  const why=r.flags.find(f=>f.sev==='high');
+  const last=game.i===game.rounds.length-1;
+  $('#gFb').innerHTML=`<div class="fb ${ok?'good':'bad'}"><b>${ok?'Correct.':'Not quite.'}</b>${esc(why?why.text:'Zero baseline, even ticks, upright and flat. This one is honest; spotting that matters as much as spotting tricks.')}</div>
+    <div style="margin-top:12px"><button class="btn" id="gNext">${last?'See my score':'Next chart'}</button></div>`;
+  $('#gScore').textContent=game.score; gProg(); $('#gNext').focus();});
+$('#gFb').addEventListener('click',e=>{if(e.target.id==='gNext'){
+  if(game.i<game.rounds.length-1){game.i++;showRound();}
+  else{const sc=game.score,n=game.rounds.length;
+    $('#gQ').textContent=sc>=7?'Chart detective.':sc>=5?'Sharp eye.':'Good start.'; $('#gOpts').innerHTML='';
+    $('#gFb').innerHTML=`<div class="fb ${sc>=5?'good':'bad'}"><b>You scored ${sc} out of ${n}.</b>${sc===n?'Perfect: you caught every trick and trusted every honest chart.':'Each round is generated fresh, so try again for a new set.'}</div><div style="margin-top:12px"><button class="btn" id="gAgain">Play again</button></div>`;}}
+  if(e.target.id==='gAgain') newGame();});
+
 // ================= lab =================
 const LAB=[{label:'Store A',value:87},{label:'Store B',value:90},{label:'Store C',value:93},{label:'Store D',value:96}];
 function runLab(){
   const st=+$('#labStart').value, r=100-st, fr=$('#labTicks').checked?[0,.55,.75,.85,.93,1]:[0,.2,.4,.6,.8,1];
-  const s=normalizeSpec({chart_type:'bar',title:'Customer satisfaction by store',domain:'general',y_axis_min:st,y_axis_max:100,
+  const s=norm({chart_type:'bar',title:'Customer satisfaction by store',domain:'general',y_axis_min:st,y_axis_max:100,
     y_ticks:fr.map(f=>Math.round((st+f*r)*10)/10),is_inverted_y:$('#labInv').checked,has_3d_effect:$('#lab3d').checked,has_dual_axis:false,values_are_percent:true,unit:'%',data:LAB,confidence:1});
-  const res=audit(s), p=lieFactorParts(LAB.map(d=>d.value),st);
+  const res=audit(s), g=drawnRatio(s), lf=g.visual/g.data;
   $('#labStartV').textContent=st+'%';
-  $('#labChart').innerHTML=renderSVG(s,{res});
-  $('#labChart').style.transform=s.has_3d_effect?'rotateX(16deg) rotateY(-14deg)':'none';
-  $('#kVis').textContent=fmt(p.visual,2)+'×'; $('#kData').textContent=fmt(p.data,2)+'×';
-  $('#kLf').textContent=fmt(p.lf,2); $('#kLf').style.color=p.lf>1.25?C.crimson:C.teal; $('#kVis').style.color=p.lf>1.25?C.crimson:'';
-  $('#labVerdict').innerHTML=`<span class="stamp s-${res.verdict}">${STAMP[res.verdict]}</span><p style="font:600 20px/1.25 var(--serif);margin:0">${esc(headline(s,res))}</p><ol class="find">${findingsHTML(res)}</ol>`;
-  $('#labHonest').innerHTML='<p class="lbl" style="margin:6px 0">The honest version</p>'+renderSVG(honestSpec(s,false),{mode:'honest'});
+  $('#labChart').innerHTML=renderSVG(s,{res,rows:3});
+  $('#labChart').style.transform=s.has_3d_effect?'rotateX(14deg) rotateY(-12deg)':'none';
+  $('#kVis').textContent=fmt(g.visual,2)+'×'; $('#kData').textContent=fmt(g.data,2)+'×'; $('#kLf').textContent=fmt(lf,2);
+  const bad=lf>1.25; $('#kLf').style.color=bad?C.crimson:C.teal; $('#kVis').style.color=bad?C.crimson:'';
+  $('#labVerdict').innerHTML=`<span class="pill v-${res.verdict}"><i></i>${VLABEL[res.verdict]}</span><h3>${esc(headline(s,res))}</h3>`;
+  $('#labHonest').innerHTML=`<p class="hint" style="margin:0 0 6px">The same numbers, drawn honestly</p><div class="gchart" style="background:#fff">${renderSVG(honestSpec(s,false),{mode:'honest'})}</div>`;
 }
 ['labStart','lab3d','labInv','labTicks'].forEach(id=>{$('#'+id).addEventListener('input',runLab);$('#'+id).addEventListener('change',runLab);});
 $('#labReset').addEventListener('click',()=>{$('#labStart').value=0;['lab3d','labInv','labTicks'].forEach(id=>$('#'+id).checked=false);runLab();});
@@ -705,31 +961,33 @@ function met(m){const p=m.tp+m.fp?m.tp/(m.tp+m.fp):0,r=m.tp+m.fn?m.tp/(m.tp+m.fn
 function renderBench(j){
   const ms=j.methods||{},keys=Object.keys(ms); if(!keys.length) throw new Error('no "methods" object found');
   const pc=v=>(Number(v)*100).toFixed(1)+'%';
-  let h=j.is_sample?`<div class="note-band"><b>Sample layout only.</b> These numbers are made up. Run <code>eval_misviz.py</code> and paste the real output.</div>`
-    :`<div class="note-band real"><b>Real run:</b> ${esc(j.dataset)}, ${esc(j.split)} split, ${esc(j.model)}, ${esc(j.n_total)} charts (${esc(j.n_misleading)} misleading, ${esc(j.n_clean)} clean)${j.generated?', '+esc(j.generated):''}.</div>`;
+  let h=j.is_sample?`<div class="band"><b>Sample layout only.</b> These numbers are made up. Run <code>eval_misviz.py</code> and paste the real output.</div>`
+    :`<div class="band real"><b>Real run:</b> ${esc(j.dataset)}, ${esc(j.split)} split, ${esc(j.model)}, ${esc(j.n_total)} charts (${esc(j.n_misleading)} misleading, ${esc(j.n_clean)} clean)${j.generated?', '+esc(j.generated):''}.</div>`;
   h+=`<table class="mt"><thead><tr><th>Method</th><th>Precision</th><th>Recall</th><th>F1</th><th>False alarms</th><th>Refused</th></tr></thead><tbody>`;
   keys.forEach(k=>{const m=ms[k],x=met(m);h+=`<tr><td>${esc(m.label||k)}</td><td>${pc(x.p)}</td><td>${pc(x.r)}</td><td>${pc(x.f)}</td><td>${pc(x.fpr)}</td><td>${esc(m.abstained??0)}</td></tr>`;});
   h+='</tbody></table><div class="cms">';
-  keys.forEach(k=>{const m=ms[k];h+=`<div><span class="lbl">${esc(m.label||k)}</span><div class="cm"><span></span><span>Flagged</span><span>Not flagged</span>
-    <span style="text-align:right">Misleading</span><b class="good">${esc(m.tp)}</b><b class="bad">${esc(m.fn)}</b>
-    <span style="text-align:right">Clean</span><b class="bad">${esc(m.fp)}</b><b class="good">${esc(m.tn)}</b></div></div>`;});
-  h+='</div><p class="small" style="margin-top:14px">“False alarms” is the false-positive rate on clean charts. Refusals count as “not flagged”, so the hybrid method never scores points by declining to answer.</p>';
+  keys.forEach(k=>{const m=ms[k];h+=`<div><h3>${esc(m.label||k)}</h3><div class="cm"><span></span><span>Flagged</span><span>Not flagged</span>
+    <span>Misleading</span><b class="good">${esc(m.tp)}</b><b class="bad">${esc(m.fn)}</b><span>Clean</span><b class="bad">${esc(m.fp)}</b><b class="good">${esc(m.tn)}</b></div></div>`;});
+  h+='</div><p class="hint" style="margin-top:14px">False alarms is the false-positive rate on clean charts. Refusals count as “not flagged”, so the hybrid never scores points by declining to answer.</p>';
   $('#benchOut').innerHTML=h;
 }
-$('#benchRender').addEventListener('click',()=>{try{renderBench(JSON.parse($('#benchJson').value));$('#benchStatus').textContent='Shown.';$('#benchStatus').className='status ok';}
+$('#benchRender').addEventListener('click',()=>{try{renderBench(JSON.parse($('#benchJson').value));$('#benchStatus').textContent='Results shown.';$('#benchStatus').className='status ok';}
   catch(e){$('#benchStatus').textContent='That isn’t valid results JSON: '+e.message;$('#benchStatus').className='status err';}});
 $('#benchSample').addEventListener('click',()=>{$('#benchJson').value=JSON.stringify(SAMPLE,null,2);renderBench(SAMPLE);});
 
 // ================= tabs & boot =================
-function showTab(name){
-  document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected',x.dataset.tab===name));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+name));
-  if(name==='lab') runLab();
+const TABS=['audit','game','lab','how'];
+function showTab(n){
+  document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-selected',x.dataset.tab===n));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+n));
+  if(n==='lab') runLab(); if(n==='game'&&!game.rounds.length) newGame();
 }
-document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{showTab(b.dataset.tab);try{history.replaceState(null,'','#'+b.dataset.tab);}catch(e){}}));
+document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{showTab(b.dataset.tab);try{history.replaceState(null,'','#'+b.dataset.tab);}catch(e){}}));
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(TABS.includes(h)) showTab(h);});
 $('#benchJson').value=JSON.stringify(SAMPLE,null,2); renderBench(SAMPLE);
-loadDemo('trunc'); runLab();
-const h=(location.hash||'').slice(1); if(['lab','bench'].includes(h)) showTab(h);
+loadDemo('trunc');
+const h0=location.hash.slice(1); if(TABS.includes(h0)&&h0!=='audit') showTab(h0);
+window.ChartTruth={audit,normalizeSpec,makeRound,answerOf,norm};
 }
 </script>
 </body>
